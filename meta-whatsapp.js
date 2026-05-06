@@ -62,16 +62,29 @@ app.post('/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    console.log('[WEBHOOK] Processing message from:', from, 'Text:', text);
+    console.log('[LOGIC] Incoming message:', text);
 
     if (!userStates[from]) {
       userStates[from] = { state: 'start', prefs: {}, lastResults: [] };
     }
 
     const currentState = userStates[from];
-    const result = processMessage(text, currentState);
+    let result;
+    try {
+      result = processMessage(text, currentState);
+      console.log('[LOGIC] Parsed prefs:', JSON.stringify(result.newState.prefs));
+      console.log('[LOGIC] Selected matches:', result.newState.lastResults.length);
+    } catch (error) {
+      console.error('[ERROR] processMessage crashed:', error.stack);
+      result = {
+        reply: '⚠️ حصل خطأ بسيط، حاول مرة ثانية',
+        newState: currentState
+      };
+    }
     const replyText = formatReply(result.reply);
     userStates[from] = result.newState;
+
+    console.log('[LOGIC] Outgoing reply:', replyText);
 
     if (!ACCESS_TOKEN || !PHONE_NUMBER_ID) {
       console.error('Missing WHATSAPP_TOKEN or PHONE_NUMBER_ID environment variables.');

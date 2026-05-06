@@ -54,13 +54,16 @@ function generateMatchReason(property, prefs) {
  * Format a single property in premium style
  */
 function formatPropertyCard(prop) {
+  const description = prop.description_ar || prop.description_en || prop.shortTag || '';
+  const summaryTag = prop.shortTag ? `
+📝 ${prop.shortTag}` : '';
   return `🏠 النوع: ${prop.rooms > 0 ? prop.rooms + ' غرفة' : 'استثماري'}
 📍 الموقع: ${prop.area}
 💰 السعر: ${prop.price.toLocaleString('ar-KW')} د.ك
-📐 المساحة: ${prop.size} م²
+📐 المساحة: ${prop.size} م²${summaryTag}
 
 ⭐ المميزات:
-${prop.description}`;
+${description}`;
 }
 
 /**

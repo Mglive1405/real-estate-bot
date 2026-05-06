@@ -3,87 +3,55 @@
 const fs = require('fs');
 const path = require('path');
 
-/**
- * Load and parse properties from data.txt
- * @returns {Array} Array of property objects
- */
 function loadProperties() {
   const dataPath = path.join(__dirname, 'data.txt');
   const content = fs.readFileSync(dataPath, 'utf8');
-  const blocks = content.split('---').map(block => block.trim()).filter(block => block);
-
-  const properties = [];
-  for (const block of blocks) {
-    const lines = block.split('\n').map(line => line.trim()).filter(line => line);
-    const property = {};
-
-    for (const line of lines) {
-      if (line.startsWith('📍')) {
-        const areaMatch = line.match(/الكويت - (.+)/);
-        if (areaMatch) property.area = areaMatch[1].trim();
-      } else if (line.startsWith('🏠')) {
-        const roomsMatch = line.match(/(\d+) غرف/);
-        if (roomsMatch) property.rooms = parseInt(roomsMatch[1]);
-      } else if (line.startsWith('💰')) {
-        const priceMatch = line.match(/([\d,]+) دينار/);
-        if (priceMatch) property.price = parseInt(priceMatch[1].replace(/,/g, ''));
-      } else if (line.startsWith('📐')) {
-        const sizeMatch = line.match(/(\d+) متر/);
-        if (sizeMatch) property.size = parseInt(sizeMatch[1]);
-      } else if (line.startsWith('الوصف:')) {
-        property.description = line.replace('الوصف:', '').trim();
-      }
-    }
-
-    if (property.area && property.rooms && property.price && property.size && property.description) {
-      properties.push(property);
-    }
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    throw new Error('Unable to parse data.txt as JSON. Please ensure data.txt is a valid JSON array.');
   }
-
-  return properties;
 }
 
-/**
- * Score a property based on user preferences
- * @param {Object} property - Property object
- * @param {Object} prefs - User preferences {intent, budget, rooms, area}
- * @returns {number} Score
- */
 function scoreProperty(property, prefs) {
   let score = 0;
+  if (!prefs) return score;
 
-  // Area match: strong
-  if (prefs.area && property.area === prefs.area) {
-    score += 10;
+  if (prefs.area && property.area === prefs.area) score += 15;
+  if (prefs.rooms && property.rooms === prefs.rooms) score += 12;
+  if (prefs.bathrooms && property.bathrooms === prefs.bathrooms) score += 8;
+  if (prefs.propertyType && property.type === prefs.propertyType) score += 10;
+  if (prefs.furnished) {
+    if (prefs.furnished === 'furnished' && property.furnished) score += 6;
+    if (prefs.furnished === 'unfurnished' && !property.furnished) score += 6;
   }
 
-  // Rooms match: strong
-  if (prefs.rooms && property.rooms === prefs.rooms) {
-    score += 10;
-  }
-
-  // Budget fit: strong
   if (prefs.budget) {
-    if (prefs.budget === 'low' && property.price < 400000) score += 10;
-    else if (prefs.budget === 'medium' && property.price >= 400000 && property.price < 600000) score += 10;
-    else if (prefs.budget === 'high' && property.price >= 600000) score += 10;
+    if (prefs.budget === 'low' && property.price < 400000) score += 12;
+    else if (prefs.budget === 'medium' && property.price >= 400000 && property.price < 600000) score += 12;
+    else if (prefs.budget === 'high' && property.price >= 600000) score += 12;
   }
 
-  // Intent match: medium (for investment, prefer higher price)
-  if (prefs.intent === 'investment' && property.price > 500000) {
-    score += 5;
-  } else if (prefs.intent === 'buy' && property.price <= 500000) {
-    score += 5;
+  if (prefs.intent === 'investment' && property.price >= 600000) score += 5;
+  if (prefs.intent === 'buy' && property.price <= 600000) score += 3;
+
+  if (prefs.preferences && Array.isArray(prefs.preferences)) {
+    for (const pref of prefs.preferences) {
+      if (pref === 'family_friendly' && property.rooms >= 3) score += 4;
+      if (pref === 'elevator' && property.amenities.includes('elevator')) score += 3;
+      if (pref === 'parking' && property.parking) score += 3;
+      if (pref === 'sea_view' && property.view === 'sea') score += 4;
+      if (pref === 'pool' && property.amenities.includes('pool')) score += 3;
+      if (pref === 'security' && property.amenities.includes('security')) score += 2;
+    }
   }
+
+  if (prefs.budget === 'low' && property.price < 300000) score += 2;
+  if (prefs.budget === 'high' && property.price >= 900000) score += 2;
 
   return score;
 }
 
-/**
- * Find the best matching property
- * @param {Object} prefs - User preferences
- * @returns {Object} {property, score, reason}
- */
 function findBestMatch(prefs) {
   const properties = loadProperties();
   let bestProperty = null;
@@ -99,31 +67,18 @@ function findBestMatch(prefs) {
   }
 
   if (!bestProperty) {
-    bestProperty = properties[0]; // fallback
+    bestProperty = properties[0];
     reason = 'لا يوجد تطابق دقيق، هذا خيار مناسب.';
   } else {
-    // Build human reason
     const reasons = [];
-    if (prefs.area && bestProperty.area === prefs.area) {
-      reasons.push('في المنطقة اللي طلبتها');
-    }
-    if (prefs.rooms && bestProperty.rooms === prefs.rooms) {
-      reasons.push('عدد الغرف مطابق لطلبك');
-    }
+    if (prefs.area && bestProperty.area === prefs.area) reasons.push('في المنطقة اللي طلبتها');
+    if (prefs.rooms && bestProperty.rooms === prefs.rooms) reasons.push('عدد الغرف مطابق لطلبك');
     if (prefs.budget) {
-      if (prefs.budget === 'low' && bestProperty.price < 400000) {
-        reasons.push('سعر مناسب لميزانيتك');
-      } else if (prefs.budget === 'medium' && bestProperty.price >= 400000 && bestProperty.price < 600000) {
-        reasons.push('سعر متوسط مناسب');
-      } else if (prefs.budget === 'high' && bestProperty.price >= 600000) {
-        reasons.push('خيار فاخر لميزانيتك');
-      }
+      if (prefs.budget === 'low' && bestProperty.price < 400000) reasons.push('سعر مناسب لميزانيتك');
+      else if (prefs.budget === 'medium' && bestProperty.price >= 400000 && bestProperty.price < 600000) reasons.push('سعر متوسط مناسب');
+      else if (prefs.budget === 'high' && bestProperty.price >= 600000) reasons.push('خيار فاخر لميزانيتك');
     }
-    if (reasons.length > 0) {
-      reason = reasons.join(' و') + '.';
-    } else {
-      reason = 'خيار مناسب بناءً على تفضيلاتك.';
-    }
+    reason = reasons.length > 0 ? reasons.join(' و') + '.' : 'خيار مناسب بناءً على تفضيلاتك.';
   }
 
   return { property: bestProperty, score: bestScore, reason };

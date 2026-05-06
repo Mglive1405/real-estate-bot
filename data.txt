@@ -1,87 +1,202 @@
-شقة 1:
-📍 الكويت - السالمية  
-🏠 3 غرف  
-💰 500,000 دينار  
-📐 120 متر  
-الوصف: 📍 موقع استراتيجي قريب من جميع الخدمات والمجمعات، مع أسانسير وموقف سيارة
-
----
-
-شقة 2:
-📍 الكويت - حولي  
-🏠 2 غرف  
-💰 350,000 دينار  
-📐 90 متر  
-الوصف: 📍 اختيار مناسب للعائلات الصغيرة مع موقع مريح وخدمات قرب المشروع
-
----
-
-شقة 3:
-📍 الكويت - الفروانية  
-🏠 4 غرف  
-💰 650,000 دينار  
-📐 150 متر  
-الوصف: 📍 مساحة واسعة وتشطيب فاخر في منطقة راقية مع خدمات ممتازة
-
----
-
-فيلا 1:
-📍 الكويت - السالمية  
-🏠 5 غرف  
-💰 1,200,000 دينار  
-📐 350 متر  
-الوصف: 🏡 فيلا دوبلكس فاخرة مع حديقة خاصة وموقف سيارة
-
----
-
-شقة 4:
-📍 الكويت - الدسمة  
-🏠 1 غرفة  
-💰 250,000 دينار  
-📐 60 متر  
-الوصف: 📍 ستوديو حديث مناسب للعزاب، قريب من المول والخدمات
-
----
-
-شقة 5:
-📍 الكويت - ميدان حولي  
-🏠 3 غرف  
-💰 480,000 دينار  
-📐 110 متر  
-الوصف: 📍 شقة مجددة بالكامل، موقع ممتاز، قريب من المدرسة والسوبرماركت
-
----
-
-فيلا 2:
-📍 الكويت - الفروانية  
-🏠 6 غرف  
-💰 1,500,000 دينار  
-📐 400 متر  
-الوصف: 🏡 فيلا كورنر فاخرة مع مسبح وحديقة، منطقة سكنية هادئة
-
----
-
-شقة 6:
-📍 الكويت - الخالدية  
-🏠 2 غرف  
-💰 320,000 دينار  
-📐 85 متر  
-الوصف: 📍 شقة مريحة، تشطيب جيد، قريب من الخدمات والمدارس
-
----
-
-مكتب:
-📍 الكويت - الكويت  
-🏠 مكتب تجاري  
-💰 400,000 دينار  
-📐 100 متر  
-الوصف: 💼 مكتب في موقع استراتيجي بالمركز التجاري، مناسب للشركات
-
----
-
-شقة 7:
-📍 الكويت - الرقعي  
-🏠 4 غرف  
-💰 750,000 دينار  
-📐 160 متر  
-الوصف: 📍 شقة فاخرة مع إطلالة جزئية على الخليج، خدمات متكاملة
+[
+  {
+    "id": 1,
+    "type": "apartment",
+    "area": "السالمية",
+    "price": 650000,
+    "rooms": 3,
+    "bathrooms": 2,
+    "size": 120,
+    "furnished": false,
+    "livingRooms": 1,
+    "kitchen": "closed",
+    "floor": 5,
+    "parking": true,
+    "amenities": ["elevator", "security", "parking"],
+    "view": "city",
+    "nearby": ["mall", "mosque", "schools"],
+    "shortTag": "أفضل خيار بالقيمة",
+    "description_ar": "شقة مرتبة بموقع ممتاز وقريبة من كل الخدمات والمجمعات.",
+    "description_en": "Neat apartment in a great location near services and shopping."
+  },
+  {
+    "id": 2,
+    "type": "apartment",
+    "area": "حولي",
+    "price": 350000,
+    "rooms": 2,
+    "bathrooms": 1,
+    "size": 90,
+    "furnished": true,
+    "livingRooms": 1,
+    "kitchen": "open",
+    "floor": 6,
+    "parking": true,
+    "amenities": ["elevator", "mall", "parking"],
+    "view": "city",
+    "nearby": ["mall", "supermarket", "schools"],
+    "shortTag": "خيار عائلي مريح",
+    "description_ar": "اختيار مناسب للعائلات الصغيرة في منطقة مريحة وقريبة من كل الخدمات.",
+    "description_en": "Comfortable family apartment near malls and schools in a convenient location."
+  },
+  {
+    "id": 3,
+    "type": "villa",
+    "area": "السالمية",
+    "price": 1200000,
+    "rooms": 5,
+    "bathrooms": 4,
+    "size": 350,
+    "furnished": false,
+    "livingRooms": 2,
+    "kitchen": "closed",
+    "floor": 1,
+    "parking": true,
+    "amenities": ["garden", "parking", "security"],
+    "view": "city",
+    "nearby": ["services", "mall", "mosque"],
+    "shortTag": "فيلا فاخرة مميزة",
+    "description_ar": "فيلا دوبلكس فاخرة مع حديقة خاصة وموقف سيارة، مناسبة للعائلات الكبيرة.",
+    "description_en": "Luxury duplex villa with private garden and parking, ideal for large families."
+  },
+  {
+    "id": 4,
+    "type": "studio",
+    "area": "الدسمة",
+    "price": 250000,
+    "rooms": 1,
+    "bathrooms": 1,
+    "size": 60,
+    "furnished": true,
+    "livingRooms": 0,
+    "kitchen": "open",
+    "floor": 2,
+    "parking": true,
+    "amenities": ["parking"],
+    "view": "city",
+    "nearby": ["mall", "services"],
+    "shortTag": "ستوديو حديث للعزاب",
+    "description_ar": "ستوديو حديث مناسب للعزاب، قريب من المول والخدمات الأساسية.",
+    "description_en": "Modern studio perfect for singles, close to mall and essential services."
+  },
+  {
+    "id": 5,
+    "type": "apartment",
+    "area": "ميدان حولي",
+    "price": 480000,
+    "rooms": 3,
+    "bathrooms": 2,
+    "size": 110,
+    "furnished": false,
+    "livingRooms": 1,
+    "kitchen": "closed",
+    "floor": 3,
+    "parking": true,
+    "amenities": ["parking", "security", "nearby"],
+    "view": "city",
+    "nearby": ["schools", "supermarket"],
+    "shortTag": "تجديد حديث وموقع ممتاز",
+    "description_ar": "شقة مجددة بالكامل في موقع ممتاز وقريب من المدرسة والسوبرماركت.",
+    "description_en": "Fully renovated apartment in an excellent location close to schools and supermarket."
+  },
+  {
+    "id": 6,
+    "type": "villa",
+    "area": "الفروانية",
+    "price": 1500000,
+    "rooms": 6,
+    "bathrooms": 5,
+    "size": 400,
+    "furnished": false,
+    "livingRooms": 2,
+    "kitchen": "closed",
+    "floor": 1,
+    "parking": true,
+    "amenities": ["pool", "garden", "security"],
+    "view": "city",
+    "nearby": ["services", "mosque"],
+    "shortTag": "فيلا فاخرة مع مسبح",
+    "description_ar": "فيلا كورنر فاخرة مع مسبح وحديقة، منطقة هادئة وموقع مميز.",
+    "description_en": "Corner luxury villa with pool and garden in a quiet, premium neighborhood."
+  },
+  {
+    "id": 7,
+    "type": "apartment",
+    "area": "الخالدية",
+    "price": 320000,
+    "rooms": 2,
+    "bathrooms": 1,
+    "size": 85,
+    "furnished": false,
+    "livingRooms": 1,
+    "kitchen": "open",
+    "floor": 4,
+    "parking": true,
+    "amenities": ["security", "parking"],
+    "view": "city",
+    "nearby": ["services", "schools"],
+    "shortTag": "شقة مريحة ومناسبة",
+    "description_ar": "شقة مريحة بتشطيب جيد، قريبة من الخدمات والمدارس.",
+    "description_en": "Cozy apartment with good finish, close to services and schools."
+  },
+  {
+    "id": 8,
+    "type": "apartment",
+    "area": "الرقعي",
+    "price": 750000,
+    "rooms": 4,
+    "bathrooms": 3,
+    "size": 160,
+    "furnished": true,
+    "livingRooms": 1,
+    "kitchen": "open",
+    "floor": 7,
+    "parking": true,
+    "amenities": ["elevator", "security", "balcony"],
+    "view": "sea",
+    "nearby": ["mall", "services"],
+    "shortTag": "شقة فاخرة بإطلالة بحرية",
+    "description_ar": "شقة فاخرة مع إطلالة جزئية على الخليج وخدمات متكاملة.",
+    "description_en": "Premium apartment with partial sea view and comprehensive services."
+  },
+  {
+    "id": 9,
+    "type": "office",
+    "area": "الكويت",
+    "price": 400000,
+    "rooms": 0,
+    "bathrooms": 1,
+    "size": 100,
+    "furnished": false,
+    "livingRooms": 0,
+    "kitchen": "open",
+    "floor": 10,
+    "parking": true,
+    "amenities": ["parking", "security"],
+    "view": "city",
+    "nearby": ["mall", "services"],
+    "shortTag": "مكتب في موقع تجاري",
+    "description_ar": "مكتب تجاري في موقع استراتيجي بالمركز التجاري، مناسب للشركات الصغيرة.",
+    "description_en": "Office in a strategic central business district, ideal for small companies."
+  },
+  {
+    "id": 10,
+    "type": "apartment",
+    "area": "الفروانية",
+    "price": 520000,
+    "rooms": 3,
+    "bathrooms": 2,
+    "size": 130,
+    "furnished": true,
+    "livingRooms": 1,
+    "kitchen": "closed",
+    "floor": 5,
+    "parking": true,
+    "amenities": ["elevator", "gym", "parking"],
+    "view": "city",
+    "nearby": ["schools", "supermarket", "services"],
+    "shortTag": "خيار ممتاز للعائلة",
+    "description_ar": "شقة فاخرة مفروشة مع مصعد وجيم، موقع ممتاز للعائلات.",
+    "description_en": "Luxury furnished apartment with elevator and gym, great family location."
+  }
+]
