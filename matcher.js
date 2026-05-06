@@ -1,4 +1,4 @@
-// matcher.js - Property matching logic
+﻿// matcher.js - Property matching logic
 
 const fs = require('fs');
 const path = require('path');
@@ -17,75 +17,115 @@ function scoreProperty(property, prefs) {
   let score = 0;
   if (!prefs) return score;
 
-  if (prefs.area && property.area === prefs.area) score += 15;
-  if (prefs.rooms && property.rooms === prefs.rooms) score += 12;
+  if (prefs.area && property.area === prefs.area) score += 20;
+  if (prefs.rooms && property.rooms === prefs.rooms) score += 15;
   if (prefs.bathrooms && property.bathrooms === prefs.bathrooms) score += 8;
-  if (prefs.propertyType && property.type === prefs.propertyType) score += 10;
+  if (prefs.propertyType && property.type === prefs.propertyType) score += 12;
+
   if (prefs.furnished) {
-    if (prefs.furnished === 'furnished' && property.furnished) score += 6;
-    if (prefs.furnished === 'unfurnished' && !property.furnished) score += 6;
+    if (prefs.furnished === 'furnished' && property.furnished) score += 8;
+    if (prefs.furnished === 'unfurnished' && !property.furnished) score += 8;
   }
 
   if (prefs.budget) {
-    if (prefs.budget === 'low' && property.price < 400000) score += 12;
-    else if (prefs.budget === 'medium' && property.price >= 400000 && property.price < 600000) score += 12;
-    else if (prefs.budget === 'high' && property.price >= 600000) score += 12;
+    if (prefs.budget === 'low' && property.price < 400000) score += 14;
+    else if (prefs.budget === 'medium' && property.price >= 400000 && property.price < 600000) score += 14;
+    else if (prefs.budget === 'high' && property.price >= 600000) score += 14;
+  }
+
+  if (prefs.intentDetail === 'comfort') {
+    if (property.rooms >= 3) score += 7;
+    if (property.amenities.includes('parking')) score += 4;
+    if (property.amenities.includes('security')) score += 3;
+  }
+
+  if (prefs.intentDetail === 'investment') {
+    if (property.price >= 500000 && property.price < 1200000) score += 6;
+    if (property.view === 'city' || property.view === 'sea') score += 4;
+    if (property.amenities.includes('security')) score += 3;
+  }
+
+  if (prefs.intentDetail === 'rent') {
+    if (property.nearby.includes('supermarket') || property.nearby.includes('schools')) score += 5;
+    if (property.area === 'السالمية' || property.area === 'حولي') score += 4;
   }
 
   if (prefs.intent === 'investment' && property.price >= 600000) score += 5;
   if (prefs.intent === 'buy' && property.price <= 600000) score += 3;
+  if (prefs.saleVsRent === 'rent') score += property.area ? 2 : 0;
 
   if (prefs.preferences && Array.isArray(prefs.preferences)) {
     for (const pref of prefs.preferences) {
-      if (pref === 'family_friendly' && property.rooms >= 3) score += 4;
-      if (pref === 'elevator' && property.amenities.includes('elevator')) score += 3;
-      if (pref === 'parking' && property.parking) score += 3;
-      if (pref === 'sea_view' && property.view === 'sea') score += 4;
-      if (pref === 'pool' && property.amenities.includes('pool')) score += 3;
-      if (pref === 'security' && property.amenities.includes('security')) score += 2;
+      if (pref === 'family_friendly' && property.rooms >= 3) score += 5;
+      if (pref === 'elevator' && property.amenities.includes('elevator')) score += 4;
+      if (pref === 'parking' && property.parking) score += 4;
+      if (pref === 'sea_view' && property.view === 'sea') score += 5;
+      if (pref === 'pool' && property.amenities.includes('pool')) score += 4;
+      if (pref === 'security' && property.amenities.includes('security')) score += 3;
     }
   }
 
-  if (prefs.budget === 'low' && property.price < 300000) score += 2;
-  if (prefs.budget === 'high' && property.price >= 900000) score += 2;
+  if (prefs.budget === 'low' && property.price < 300000) score += 3;
+  if (prefs.budget === 'high' && property.price >= 900000) score += 3;
 
   return score;
 }
 
-function findBestMatch(prefs) {
+function generateMatchReason(property, prefs, lang = 'ar') {
+  const reasons = [];
+  const hasReason = (textAr, textEn) => (lang === 'ar' ? textAr : textEn);
+
+  if (prefs.area && property.area === prefs.area) {
+    reasons.push(hasReason('موقع قوي', 'Strong location'));
+  }
+  if (prefs.rooms && property.rooms === prefs.rooms) {
+    reasons.push(hasReason('عدد الغرف مناسب', 'Room count fits')); 
+  }
+  if (prefs.budget) {
+    if (prefs.budget === 'low' && property.price < 400000) reasons.push(hasReason('سعر مناسب للميزانية', 'Great budget fit'));
+    else if (prefs.budget === 'medium' && property.price >= 400000 && property.price < 600000) reasons.push(hasReason('خيار متوازن', 'Balanced price'));
+    else if (prefs.budget === 'high' && property.price >= 600000) reasons.push(hasReason('خيار فاخر', 'Premium choice'));
+  }
+  if (prefs.intentDetail === 'comfort' && property.rooms >= 3) {
+    reasons.push(hasReason('هذا خيار ممتاز للعائلة', 'Excellent choice for family'));
+  }
+  if (prefs.intentDetail === 'investment' && property.price >= 500000) {
+    reasons.push(hasReason('استثمار ممتاز بعائد قوي', 'Great investment potential'));
+  }
+  if (prefs.intentDetail === 'rent' && (property.nearby.includes('supermarket') || property.nearby.includes('schools'))) {
+    reasons.push(hasReason('موقع مطلوب للإيجار', 'High demand rental area'));
+  }
+
+  if (property.amenities.includes('parking')) {
+    reasons.push(hasReason('موقف متاح', 'Parking available'));
+  }
+  if (property.amenities.includes('security')) {
+    reasons.push(hasReason('أمن وخدمات', 'Security and services'));
+  }
+
+  if (reasons.length === 0) {
+    return hasReason('خيار ممتاز يناسب تفضيلاتك', 'Excellent option for your needs');
+  }
+  return reasons.slice(0, 3).join(' و');
+}
+
+function findTopMatches(prefs, limit = 3, lang = 'ar') {
   const properties = loadProperties();
-  let bestProperty = null;
-  let bestScore = -1;
-  let reason = '';
-
-  for (const property of properties) {
+  const results = properties.map(property => {
     const score = scoreProperty(property, prefs);
-    if (score > bestScore) {
-      bestScore = score;
-      bestProperty = property;
-    }
-  }
+    const reason = generateMatchReason(property, prefs, lang);
+    return { property, score, reason };
+  });
 
-  if (!bestProperty) {
-    bestProperty = properties[0];
-    reason = 'لا يوجد تطابق دقيق، هذا خيار مناسب.';
-  } else {
-    const reasons = [];
-    if (prefs.area && bestProperty.area === prefs.area) reasons.push('في المنطقة اللي طلبتها');
-    if (prefs.rooms && bestProperty.rooms === prefs.rooms) reasons.push('عدد الغرف مطابق لطلبك');
-    if (prefs.budget) {
-      if (prefs.budget === 'low' && bestProperty.price < 400000) reasons.push('سعر مناسب لميزانيتك');
-      else if (prefs.budget === 'medium' && bestProperty.price >= 400000 && bestProperty.price < 600000) reasons.push('سعر متوسط مناسب');
-      else if (prefs.budget === 'high' && bestProperty.price >= 600000) reasons.push('خيار فاخر لميزانيتك');
-    }
-    reason = reasons.length > 0 ? reasons.join(' و') + '.' : 'خيار مناسب بناءً على تفضيلاتك.';
-  }
-
-  return { property: bestProperty, score: bestScore, reason };
+  return results
+    .filter(result => result.score >= 1)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 }
 
 module.exports = {
   loadProperties,
   scoreProperty,
-  findBestMatch
+  generateMatchReason,
+  findTopMatches
 };

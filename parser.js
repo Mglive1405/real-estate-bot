@@ -1,4 +1,4 @@
-// parser.js - Arabic and English message parsing helpers
+﻿// parser.js - Arabic and English message parsing helpers
 
 const arabicDigitsMap = {
   '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
@@ -6,7 +6,7 @@ const arabicDigitsMap = {
 };
 
 function normalizeText(text) {
-  const normalizedNumbers = text.replace(/[٠-٩]/g, digit => arabicDigitsMap[digit] || digit);
+  const normalizedNumbers = String(text || '').replace(/[٠-٩]/g, digit => arabicDigitsMap[digit] || digit);
   return normalizedNumbers
     .replace(/\s+/g, ' ')
     .trim()
@@ -25,11 +25,11 @@ function normalizeText(text) {
 }
 
 function detectLanguage(text) {
+  const normalized = normalizeText(text);
   const hasArabic = /[\u0600-\u06FF]/.test(text);
   const hasEnglish = /[A-Za-z]/.test(text);
   if (hasArabic && !hasEnglish) return 'ar';
   if (hasEnglish && !hasArabic) return 'en';
-  const normalized = text.toLowerCase();
   const englishKeywords = ['buy', 'rent', 'luxury', 'cheap', 'family', 'room', 'apartment', 'villa', 'studio', 'office'];
   if (englishKeywords.some(word => normalized.includes(word))) return 'en';
   return hasArabic ? 'ar' : 'en';
@@ -116,7 +116,7 @@ function detectArea(text) {
   const normalized = normalizeText(text);
   const areaMap = {
     'السالمية': 'السالمية', 'salmiya': 'السالمية',
-    'حولي': 'حولي', 'hawally': 'حولي', 'hawally': 'حولي',
+    'حولي': 'حولي', 'hawally': 'حولي',
     'الفروانية': 'الفروانية', 'farwaniya': 'الفروانية',
     'الدسمة': 'الدسمة', 'dasma': 'الدسمة',
     'الخالدية': 'الخالدية', 'khaldiya': 'الخالدية',
@@ -188,8 +188,38 @@ function detectSelectionOrdinal(text) {
   return null;
 }
 
+function detectNumericCommand(text) {
+  const normalized = normalizeText(text);
+  const digitMatch = normalized.match(/\b([1-6])\b/);
+  if (digitMatch) return parseInt(digitMatch[1], 10);
+  return null;
+}
+
+function detectSelectionIndex(text) {
+  const ordinal = detectSelectionOrdinal(text);
+  if (ordinal) return ordinal;
+  const numeric = detectNumericCommand(text);
+  if (!numeric) return null;
+  const normalized = normalizeText(text);
+  if (/\b(first|second|third|fourth|fifth|property|رقم|الأول|الثاني|الثالث|الرابع|الخامس)\b/.test(normalized)) {
+    return numeric;
+  }
+  return null;
+}
+
+function detectFollowUpAction(text) {
+  const normalized = normalizeText(text);
+  if (/(تفاصيل|details|first|first property|الأول|اول)/.test(normalized)) return 'details';
+  if (/(أرخص|cheaper|cheapest)/.test(normalized)) return 'cheaper';
+  if (/(أفخم|luxury|fancier)/.test(normalized)) return 'luxury';
+  if (/(منطقة ثانية|another area|same specs elsewhere|غير المنطقة)/.test(normalized)) return 'another_area';
+  if (/(واتساب|واتس|whatsapp|اتصال|call|phone|تواصل)/.test(normalized)) return 'contact';
+  if (/(نعم تواصل|yes contact|contact me|connect me)/.test(normalized)) return 'confirm_contact';
+  return null;
+}
+
 function detectName(text) {
-  const normalized = text.trim();
+  const normalized = String(text || '').trim();
   const match = normalized.match(/(?:يا\s+|ya\s+|hi\s+|hello\s+|hey\s+)([A-Za-z][A-Za-z]+)/i);
   return match ? match[1] : null;
 }
@@ -209,5 +239,8 @@ module.exports = {
   detectPreferences,
   detectContactMethod,
   detectSelectionOrdinal,
+  detectNumericCommand,
+  detectSelectionIndex,
+  detectFollowUpAction,
   detectName
 };

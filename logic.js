@@ -1,331 +1,418 @@
-// logic.js - Main smart logic for the real estate bot
+﻿// logic.js - Main smart logic for the real estate bot
 
 const parser = require('./parser');
 const matcher = require('./matcher');
 
-/**
- * Detect if message is a numeric command (1-5)
- */
-function detectNumericCommand(message) {
-  const trimmed = message.trim();
-  if (trimmed === '1' || trimmed === '2' || trimmed === '3' || trimmed === '4' || trimmed === '5') {
-    return parseInt(trimmed);
+const MENU_CHOICES = {
+  asked_use_case: {
+    1: { intentDetail: 'comfort' },
+    2: { intentDetail: 'investment' },
+    3: { intentDetail: 'rent' }
+  },
+  asked_type: {
+    1: { propertyType: 'apartment' },
+    2: { propertyType: 'villa' },
+    3: { propertyType: 'studio' },
+    4: { propertyType: 'office' }
+  },
+  asked_budget: {
+    1: { budget: 'low' },
+    2: { budget: 'medium' },
+    3: { budget: 'high' }
+  },
+  asked_rooms: {
+    1: { rooms: 1 },
+    2: { rooms: 2 },
+    3: { rooms: 3 },
+    4: { rooms: 4 }
+  },
+  asked_area: {
+    1: { area: 'السالمية' },
+    2: { area: 'حولي' },
+    3: { area: 'الفروانية' },
+    4: { area: 'الخالدية' },
+    5: { area: 'الدسمة' },
+    6: { area: undefined }
   }
-  return null;
-}
+};
 
-/**
- * Get top N properties matching preferences
- */
-function findTopMatches(prefs, limit = 3) {
-  const matcher_results = [];
-  const allProps = matcher.loadProperties();
-  
-  for (const prop of allProps) {
-    const score = matcher.scoreProperty(prop, prefs);
-    if (score >= 0) {
-      matcher_results.push({ property: prop, score, reason: generateMatchReason(prop, prefs) });
-    }
+const PHRASES = {
+  fallback: {
+    ar: '⚠️ صار خطأ بسيط، حاول مرة ثانية',
+    en: '⚠️ Small error happened, please try again.'
+  },
+  asked_use_case: {
+    ar: 'تمام 👌 هل تبحث عن:\n1️⃣ سكن\n2️⃣ استثمار\n3️⃣ تأجير',
+    en: 'Nice 👍 Are you looking for:\n1️⃣ comfort\n2️⃣ investment\n3️⃣ rent'
+  },
+  noMatch: {
+    ar: '🤔 لم أجد نتائج مطابقة تماماً، لكن لدي خيارات قريبة. جرب تعديل الميزانية أو المنطقة.',
+    en: '🤔 I could not find an exact match, but I have close options. Try changing budget or area.'
+  },
+  asked_type: {
+    ar: 'حلو 👍 ما نوع العقار اللي تبحث عنه؟\n1️⃣ شقة\n2️⃣ فيلا\n3️⃣ ستوديو\n4️⃣ مكتب تجاري',
+    en: 'Nice 👍 What type of property are you looking for?\n1️⃣ apartment\n2️⃣ villa\n3️⃣ studio\n4️⃣ office'
+  },
+  asked_budget: {
+    ar: 'تمام 👌 ما ميزانيتك التقريبية؟\n1️⃣ رخيص (أقل من 400 ألف)\n2️⃣ متوسط (400-600 ألف)\n3️⃣ فاخر (أكثر من 600 ألف)',
+    en: 'Great 👌 What is your approximate budget?\n1️⃣ low (under 400k)\n2️⃣ medium (400-600k)\n3️⃣ high (above 600k)'
+  },
+  asked_rooms: {
+    ar: 'اختيار موفق 🔥 كم عدد الغرف؟\n1️⃣ غرفة واحدة\n2️⃣ غرفتين\n3️⃣ 3 غرف\n4️⃣ 4 غرف أو أكثر',
+    en: 'Good choice 🔥 How many rooms?\n1️⃣ 1 room\n2️⃣ 2 rooms\n3️⃣ 3 rooms\n4️⃣ 4+ rooms'
+  },
+  asked_area: {
+    ar: 'تمام 👌 أي منطقة بالكويت تفضل؟\n1️⃣ السالمية\n2️⃣ حولي\n3️⃣ الفروانية\n4️⃣ الخالدية\n5️⃣ الدسمة\n6️⃣ أي منطقة',
+    en: 'Great 👌 Which area do you prefer?\n1️⃣ Salmiya\n2️⃣ Hawally\n3️⃣ Farwaniya\n4️⃣ Khaldiya\n5️⃣ Dasma\n6️⃣ Any area'
+  },
+  asking_contact_method: {
+    ar: 'تمام 👌 تفضل تواصل عبر واتساب أو اتصال؟',
+    en: 'Great 👌 Would you like WhatsApp or a phone call?'
+  },
+  contact_confirmed: {
+    ar: 'تمام 👌 بخلي الوسيط يتواصل معك مباشرة\n📞 +965 9976 9966',
+    en: 'Great 👌 The agent will contact you directly.\n📞 +965 9976 9966'
+  },
+  followUpPrompt: {
+    ar: 'أي واحد شدك أكثر؟ 👀',
+    en: 'Which one caught your attention? 👀'
+  },
+  nextFilter: {
+    ar: 'تحب أفلتر لك أكثر؟ مثلاً حسب السعر أو المساحة 👌',
+    en: 'Would you like me to filter more by price or size? 👌'
   }
-  
-  return matcher_results.sort((a, b) => b.score - a.score).slice(0, limit);
-}
+};
 
-/**
- * Generate reason why property matches user
- */
-function generateMatchReason(property, prefs) {
-  const reasons = [];
-  if (prefs.area && property.area === prefs.area) {
-    reasons.push('في المنطقة اللي طلبتها');
-  }
-  if (prefs.rooms && property.rooms === prefs.rooms) {
-    reasons.push('عدد الغرف مطابق');
-  }
-  if (prefs.budget) {
-    if (prefs.budget === 'low' && property.price < 400000) reasons.push('سعر مناسب');
-    else if (prefs.budget === 'medium' && property.price >= 400000 && property.price < 600000) reasons.push('سعر متوسط');
-    else if (prefs.budget === 'high' && property.price >= 600000) reasons.push('خيار فاخر');
-  }
-  return reasons.length > 0 ? reasons.join(' و') + '.' : 'خيار مناسب لتفضيلاتك';
-}
-
-/**
- * Format a single property in premium style
- */
-function formatPropertyCard(prop) {
-  const description = prop.description_ar || prop.description_en || prop.shortTag || '';
-  const summaryTag = prop.shortTag ? `
-📝 ${prop.shortTag}` : '';
-  return `🏠 النوع: ${prop.rooms > 0 ? prop.rooms + ' غرفة' : 'استثماري'}
-📍 الموقع: ${prop.area}
-💰 السعر: ${prop.price.toLocaleString('ar-KW')} د.ك
-📐 المساحة: ${prop.size} م²${summaryTag}
-
-⭐ المميزات:
-${description}`;
-}
-
-/**
- * Format multiple properties result
- */
-function formatMultipleResults(matches) {
-  if (matches.length === 0) {
-    return `🤔 لم أجد نتائج مطابقة تماماً، لكن لدي خيارات قريبة
-جرب تعديل الميزانية أو المنطقة`;
-  }
-
-  let response = `✨ عندي لك ${matches.length} خيار ممتاز يناسب طلبك 👌\n\n`;
-  
-  for (let i = 0; i < matches.length; i++) {
-    const match = matches[i];
-    response += `━━━━━━━━━━━━━━━━━━━
-${i + 1}. ${formatPropertyCard(match.property)}
-✅ ${match.reason}
-`;
-  }
-  
-  response += `━━━━━━━━━━━━━━━━━━━
-اختر ما يناسبك 👇
-
-1️⃣ تفاصيل الأول
-2️⃣ أرخص
-3️⃣ أفخم
-4️⃣ نفس المواصفات بمنطقة ثانية
-5️⃣ تواصل مع الوكيل`;
-  
-  return response;
-}
-
-/**
- * Analyze user message and extract preferences
- * @param {string} message - User message
- * @returns {Object} Extracted preferences
- */
-function analyzeMessage(message) {
+function createSessionState(lang = 'ar') {
   return {
-    intent: parser.detectIntent(message),
-    budget: parser.detectBudget(message),
-    rooms: parser.detectRooms(message),
-    area: parser.detectArea(message),
-    propertyType: parser.detectPropertyType(message),
-    furnished: parser.detectFurnished(message),
-    saleVsRent: parser.detectSaleVsRent(message),
-    preferences: parser.detectPreferences(message)
+    prefs: {},
+    lastResults: [],
+    selectedProperty: null,
+    state: 'start',
+    lang,
+    history: [],
+    lastInteraction: Date.now()
   };
 }
 
-/**
- * Update user preferences with new extracted info (with memory)
- * @param {Object} currentPrefs - Current preferences (never lose data)
- * @param {Object} newPrefs - New extracted preferences
- * @returns {Object} Updated preferences
- */
+function getLang(message, currentLang) {
+  const detected = parser.detectLanguage(message);
+  return detected || currentLang || 'ar';
+}
+
+function getRandomLine(lines) {
+  return lines[Math.floor(Math.random() * lines.length)];
+}
+
+function getOpening(lang) {
+  const options = {
+    ar: [
+      'تمام 👌 لقيت لك خيارات قوية',
+      'حلو 👍 هذه أفضل الخيارات',
+      'صراحة عندي لك خيارات ممتازة'
+    ],
+    en: [
+      'Nice 👌 I found strong matches',
+      'These are great options for your request',
+      'I think you’ll like these properties'
+    ]
+  };
+  return getRandomLine(options[lang] || options.ar);
+}
+
+function formatList(items, lang) {
+  if (!items || items.length === 0) return lang === 'ar' ? 'لا يوجد' : 'None';
+  return items.join(', ');
+}
+
+function formatBooleanLabel(value, lang) {
+  if (lang === 'ar') return value ? 'نعم' : 'لا';
+  return value ? 'Yes' : 'No';
+}
+
+function formatPropertyType(type, lang) {
+  const mapping = {
+    apartment: { ar: 'شقة', en: 'Apartment' },
+    villa: { ar: 'فيلا', en: 'Villa' },
+    studio: { ar: 'ستوديو', en: 'Studio' },
+    office: { ar: 'مكتب', en: 'Office' },
+    land: { ar: 'أرض', en: 'Land' }
+  };
+  return (mapping[type] || mapping.apartment)[lang] || type;
+}
+
+function formatKitchenLabel(kind, lang) {
+  if (!kind) return lang === 'ar' ? 'متوفر' : 'Available';
+  if (lang === 'ar') return kind === 'closed' ? 'مغلق' : 'مفتوح';
+  return kind === 'closed' ? 'Closed' : 'Open';
+}
+
+function formatPrice(price, lang) {
+  if (lang === 'ar') return `${price.toLocaleString('ar-KW')} د.ك`;
+  return `${price.toLocaleString('en-US')} KWD`;
+}
+
+function formatPropertySummary(match, index, lang) {
+  const prop = match.property;
+  return `━━━━━━━━━━━━━━━━━━━\n${index}. ${formatPropertyType(prop.type, lang)} | ${prop.rooms} ${lang === 'ar' ? 'غرف' : 'rooms'} | ${formatPrice(prop.price, lang)}\n${lang === 'ar' ? '📍' : '📍'} ${prop.area}\n${lang === 'ar' ? '⭐ سبب الترشيح' : '⭐ Recommendation reason'}: ${match.reason}`;
+}
+
+function formatPropertyDetails(prop, lang) {
+  return `📋 ${lang === 'ar' ? 'تفاصيل العقار' : 'Property details'}\n
+🏠 ${lang === 'ar' ? 'نوع العقار' : 'Type'}: ${formatPropertyType(prop.type, lang)}\n📍 ${lang === 'ar' ? 'المنطقة' : 'Area'}: ${prop.area}\n💰 ${lang === 'ar' ? 'السعر' : 'Price'}: ${formatPrice(prop.price, lang)}\n📐 ${lang === 'ar' ? 'المساحة' : 'Size'}: ${prop.size} m²\n🛏️ ${lang === 'ar' ? 'الغرف' : 'Rooms'}: ${prop.rooms}\n🛁 ${lang === 'ar' ? 'الحمامات' : 'Bathrooms'}: ${prop.bathrooms}\n🛋️ ${lang === 'ar' ? 'الغرف المعيشة' : 'Living rooms'}: ${prop.livingRooms}\n🍽️ ${lang === 'ar' ? 'المطبخ' : 'Kitchen'}: ${formatKitchenLabel(prop.kitchen, lang)}\n🏢 ${lang === 'ar' ? 'الطابق' : 'Floor'}: ${prop.floor}\n${lang === 'ar' ? '🛋️ مفروش' : '🛋️ Furnished'}: ${formatBooleanLabel(prop.furnished, lang)}\n${lang === 'ar' ? '🚗 موقف' : '🚗 Parking'}: ${formatBooleanLabel(prop.parking, lang)}\n${lang === 'ar' ? '✨ المرافق' : '✨ Amenities'}: ${formatList(prop.amenities, lang)}\n${lang === 'ar' ? '📍 القرب من' : '📍 Nearby'}: ${formatList(prop.nearby, lang)}\n${lang === 'ar' ? '📝 الوصف' : '📝 Description'}: ${prop.description_ar || prop.description_en || prop.shortTag || ''}`;
+}
+
+function formatMatchesResponse(matches, lang) {
+  if (!matches || matches.length === 0) {
+    return PHRASES.noMatch[lang];
+  }
+
+  const header = `${getOpening(lang)}\n\n${lang === 'ar' ? 'هذه بعض الخيارات اللي جمعت لك:' : 'Here are the top matches I found for you:'}`;
+  const cards = matches.map((match, idx) => formatPropertySummary(match, idx + 1, lang)).join('\n\n');
+  const menu = lang === 'ar'
+    ? 'اختر اللي يناسبك:\n1️⃣ تفاصيل الأول\n2️⃣ أرخص\n3️⃣ أفخم\n4️⃣ نفس المواصفات بمنطقة ثانية\n5️⃣ تواصل مع الوكيل'
+    : 'Choose what you want:\n1️⃣ Details for the first\n2️⃣ Cheaper options\n3️⃣ Luxury options\n4️⃣ Same specs in another area\n5️⃣ Contact the agent';
+
+  return `${header}\n\n${cards}\n\n${PHRASES.followUpPrompt[lang]}\n\n${menu}`;
+}
+
+function formatSelectionReply(match, lang) {
+  const prop = match.property;
+  return `${lang === 'ar' ? 'خيار ممتاز، هذه التفاصيل:' : 'Great choice, here are the details:'}\n\n${formatPropertyDetails(prop, lang)}\n\n${lang === 'ar' ? '✅ سبب الترشيح' : '✅ Recommendation reason'}: ${match.reason}\n\n${lang === 'ar' ? 'إذا حاب تواصل مع الوكيل اكتب: واتساب أو اتصال' : 'If you want the agent to contact you, reply with WhatsApp or call.'}`;
+}
+
 function updatePreferences(currentPrefs, newPrefs) {
   const updated = { ...currentPrefs };
-  // Only update if new value exists, never clear existing data
   if (newPrefs.intent) updated.intent = newPrefs.intent;
+  if (newPrefs.intentDetail) updated.intentDetail = newPrefs.intentDetail;
   if (newPrefs.budget) updated.budget = newPrefs.budget;
   if (newPrefs.rooms) updated.rooms = newPrefs.rooms;
-  if (newPrefs.area) updated.area = newPrefs.area;
+  if (newPrefs.bathrooms) updated.bathrooms = newPrefs.bathrooms;
+  if (newPrefs.area !== undefined) updated.area = newPrefs.area;
   if (newPrefs.propertyType) updated.propertyType = newPrefs.propertyType;
   if (newPrefs.furnished) updated.furnished = newPrefs.furnished;
   if (newPrefs.saleVsRent) updated.saleVsRent = newPrefs.saleVsRent;
   if (newPrefs.preferences && newPrefs.preferences.length > 0) {
-    updated.preferences = [...(updated.preferences || []), ...newPrefs.preferences];
-    updated.preferences = [...new Set(updated.preferences)]; // Remove duplicates
+    updated.preferences = [...new Set([...(updated.preferences || []), ...newPrefs.preferences])];
   }
+  if (newPrefs.contactMethod) updated.contactMethod = newPrefs.contactMethod;
   return updated;
 }
 
-/**
- * Check if preferences are complete enough for recommendation
- * @param {Object} prefs - User preferences
- * @returns {boolean} True if ready
- */
 function isReadyForRecommendation(prefs) {
-  const usefulPrefs = [prefs.budget, prefs.rooms, prefs.area].filter(p => p != null);
-  return usefulPrefs.length >= 2;
+  const useful = [prefs.budget, prefs.rooms, prefs.area, prefs.intentDetail].filter(v => v != null);
+  return useful.length >= 2;
 }
 
 function determineNextQuestion(prefs) {
-  if (!prefs.intent) {
-    return 'asked_type';
-  }
-  if (!prefs.rooms) {
-    return 'asked_rooms';
-  }
-  if (!prefs.area) {
-    return 'asked_area';
-  }
-  if (!prefs.budget) {
-    return 'asked_budget';
-  }
+  if (!prefs.intentDetail) return 'asked_use_case';
+  if (!prefs.propertyType) return 'asked_type';
+  if (!prefs.rooms) return 'asked_rooms';
+  if (!prefs.area) return 'asked_area';
+  if (!prefs.budget) return 'asked_budget';
   return 'asked_budget';
 }
 
-function recommendationReply(match) {
-  const prop = match.property;
-  
-  return `✨ عندي لك خيار ممتاز يناسب طلبك 👌
-
-━━━━━━━━━━━━━━
-
-${formatPropertyCard(prop)}
-
-✅ لماذا يناسبك:
-${match.reason}
-
-🔥 هذا العرض مطلوب حالياً
-
-━━━━━━━━━━━━━━
-اختر التالي 👇
-
-1️⃣ تفاصيل أكثر
-2️⃣ أرخص
-3️⃣ أفخم
-4️⃣ نفس المواصفات بمنطقة ثانية
-5️⃣ تواصل مع الوكيل`;
+function applyMenuChoice(message, session) {
+  const choice = parser.detectNumericCommand(message);
+  if (!choice) return null;
+  if (!session.state || !MENU_CHOICES[session.state]) return null;
+  const mapped = MENU_CHOICES[session.state][choice];
+  if (!mapped) return null;
+  return { newPrefs: mapped, nextState: determineNextQuestion({ ...session.prefs, ...mapped }) };
 }
 
-function generateResponse(nextState, prefs, match = null) {
-  if (match) {
-    return recommendationReply(match);
+function buildContactResponse(contactMethod, lang) {
+  if (contactMethod) {
+    return PHRASES.contact_confirmed[lang] || PHRASES.contactConfirmed?.[lang];
   }
-
-  switch (nextState) {
-    case 'asked_type':
-      return `حلو 👍 ما نوع العقار اللي تبحث عنه؟
-
-1️⃣ شقة
-2️⃣ فيلا
-3️⃣ ستوديو
-4️⃣ مكتب تجاري`;
-    case 'asked_budget':
-      return `تمام 👌 ما ميزانيتك التقريبية؟
-
-💰 اكتب المبلغ أو اختر:
-1️⃣ رخيص (أقل من 400 ألف)
-2️⃣ متوسط (400-600 ألف)
-3️⃣ فاخر (أكثر من 600 ألف)`;
-    case 'asked_rooms':
-      return `اختيار موفق 🔥 كم عدد الغرف؟
-
-1️⃣ غرفة واحدة
-2️⃣ غرفتين
-3️⃣ 3 غرف
-4️⃣ 4 غرف أو أكثر`;
-    case 'asked_area':
-      return `تمام 👌 أي منطقة بالكويت تفضل؟
-
-1️⃣ السالمية
-2️⃣ حولي
-3️⃣ الفروانية
-4️⃣ الخالدية
-5️⃣ الدسمة
-6️⃣ أي منطقة`;
-    default:
-      return `👋 أهلًا وسهلًا في مساعدك العقاري!
-
-🏠 نساعدك تلقي الشقة أو الفيلا المناسبة بالكويت.
-
-كيف أقدر أساعدك؟ اكتب مثلاً:
-• "شقة 3 غرف بـ 500 ألف"
-• "فيلا فخمة في السالمية"
-• "أرني رخيص الأسعار"`;
-  }
+  return PHRASES.asking_contact_method[lang] || PHRASES.askContactMethod?.[lang];
 }
 
-/**
- * Process user message and return bot response
- * @param {string} message - User message
- * @param {Object} conversationState - {state, prefs, lastResults}
- * @returns {Object} {reply, newState: {state, prefs, lastResults}}
- */
-function processMessage(message, conversationState) {
-  const { prefs, lastResults } = conversationState;
-  const numericCmd = detectNumericCommand(message);
+function processMessage(message, session) {
+  try {
+    const text = String(message || '').trim();
+    const lang = getLang(text, session.lang);
+    session.lang = lang;
+    session.lastInteraction = Date.now();
 
-  // Handle numeric commands
-  if (numericCmd && lastResults && lastResults.length > 0) {
-    switch (numericCmd) {
-      case 1:
-        const detailedReply = `📋 التفاصيل الكاملة:\n\n${formatPropertyCard(lastResults[0].property)}\n\n🤝 للتواصل مع الوكيل:\nاكتب: "نعم تواصل"`;
-        return { reply: detailedReply, newState: conversationState };
-      case 2:
-        const cheaper = findTopMatches({ ...prefs, budget: 'low' }, 3);
-        return { reply: formatMultipleResults(cheaper), newState: { ...conversationState, lastResults: cheaper } };
-      case 3:
-        const luxury = findTopMatches({ ...prefs, budget: 'high' }, 3);
-        return { reply: formatMultipleResults(luxury), newState: { ...conversationState, lastResults: luxury } };
-      case 4:
-        const otherArea = findTopMatches({ ...prefs, area: undefined }, 3);
-        return { reply: formatMultipleResults(otherArea), newState: { ...conversationState, lastResults: otherArea } };
-      case 5:
-        return { reply: `📱 تواصل معنا على: +965-XXXX-XXXX\n\nأو أرسل لنا كل تفاصيلك لنساعدك بشكل أفضل`, newState: conversationState };
-    }
-  }
-
-  // Regular message processing
-  const extracted = analyzeMessage(message);
-  const updatedPrefs = updatePreferences(prefs, extracted);
-
-  const hasUsefulInfo = extracted.intent || extracted.budget || extracted.rooms || extracted.area || extracted.propertyType;
-  if (!hasUsefulInfo) {
-    const reply = `ما فهمت طلبك بالكامل 🤔\nتقدر توضح أكثر؟\nمثال: "شقة 3 غرف في السالمية بميزانية 500 ألف"`;
-    return { reply, newState: conversationState };
-  }
-
-  // If we have enough info, recommend
-  const countUsefulFields = [updatedPrefs.budget, updatedPrefs.rooms, updatedPrefs.area].filter(p => p != null).length;
-  if (countUsefulFields >= 2) {
-    const matches = findTopMatches(updatedPrefs, 3);
-    const reply = formatMultipleResults(matches);
-    return {
-      reply,
-      newState: { state: 'recommended', prefs: updatedPrefs, lastResults: matches }
+    const followUpAction = parser.detectFollowUpAction(text);
+    const selectionIndex = parser.detectSelectionIndex(text);
+    const contactMethod = parser.detectContactMethod(text);
+    const numericCommand = parser.detectNumericCommand(text);
+    const extracted = {
+      intent: parser.detectIntent(text),
+      intentDetail: parser.detectIntentDetail(text),
+      budget: parser.detectBudget(text),
+      rooms: parser.detectRooms(text),
+      bathrooms: parser.detectBathrooms(text),
+      area: parser.detectArea(text),
+      propertyType: parser.detectPropertyType(text),
+      furnished: parser.detectFurnished(text),
+      saleVsRent: parser.detectSaleVsRent(text),
+      preferences: parser.detectPreferences(text),
+      contactMethod,
+      selectionIndex,
+      followUpAction,
+      numericCommand
     };
+
+    const menuChoice = applyMenuChoice(text, session);
+    if (menuChoice) {
+      session.prefs = updatePreferences(session.prefs, menuChoice.newPrefs);
+      session.state = menuChoice.nextState;
+      const ready = isReadyForRecommendation(session.prefs);
+      if (ready) {
+        session.lastResults = matcher.findTopMatches(session.prefs, 3, lang);
+        session.state = 'recommended';
+        const reply = formatMatchesResponse(session.lastResults, lang);
+        session.history.push({ incoming: text, outgoing: reply });
+        session.selectedProperty = null;
+        return { reply, newState: session };
+      }
+      const reply = PHRASES[session.state][lang];
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: session };
+    }
+
+    if (session.state === 'asking_contact_method' && contactMethod) {
+      session.prefs.contactMethod = contactMethod;
+      session.state = 'contact_confirmed';
+      const reply = buildContactResponse(contactMethod, lang);
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: session };
+    }
+
+    if (selectionIndex && session.lastResults && session.lastResults.length > 0) {
+      const index = Math.min(Math.max(selectionIndex, 1), session.lastResults.length);
+      const match = session.lastResults[index - 1];
+      session.selectedProperty = match.property;
+      const reply = formatSelectionReply(match, lang);
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: { ...session, state: 'selected' } };
+    }
+
+    if (followUpAction === 'details' && session.lastResults && session.lastResults.length > 0) {
+      const match = session.selectedProperty
+        ? session.lastResults.find(item => item.property.id === session.selectedProperty.id) || session.lastResults[0]
+        : session.lastResults[0];
+      session.selectedProperty = match.property;
+      const reply = formatSelectionReply(match, lang);
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: { ...session, state: 'selected' } };
+    }
+
+    if (followUpAction === 'cheaper' && session.lastResults && session.lastResults.length > 0) {
+      session.lastResults = matcher.findTopMatches({ ...session.prefs, budget: 'low' }, 3, lang);
+      session.state = 'recommended';
+      session.selectedProperty = null;
+      const reply = formatMatchesResponse(session.lastResults, lang);
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: session };
+    }
+
+    if (followUpAction === 'luxury' && session.lastResults && session.lastResults.length > 0) {
+      session.lastResults = matcher.findTopMatches({ ...session.prefs, budget: 'high' }, 3, lang);
+      session.state = 'recommended';
+      session.selectedProperty = null;
+      const reply = formatMatchesResponse(session.lastResults, lang);
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: session };
+    }
+
+    if (followUpAction === 'another_area' && session.lastResults && session.lastResults.length > 0) {
+      session.lastResults = matcher.findTopMatches({ ...session.prefs, area: undefined }, 3, lang);
+      session.state = 'recommended';
+      session.selectedProperty = null;
+      const reply = formatMatchesResponse(session.lastResults, lang);
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: session };
+    }
+
+    if (followUpAction === 'contact') {
+      if (contactMethod) {
+        session.prefs.contactMethod = contactMethod;
+        session.state = 'contact_confirmed';
+        const reply = buildContactResponse(contactMethod, lang);
+        session.history.push({ incoming: text, outgoing: reply });
+        return { reply, newState: session };
+      }
+      session.state = 'asking_contact_method';
+      const reply = buildContactResponse(null, lang);
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: session };
+    }
+
+    if (contactMethod && session.lastResults && session.lastResults.length > 0) {
+      session.prefs.contactMethod = contactMethod;
+      session.state = 'contact_confirmed';
+      const reply = buildContactResponse(contactMethod, lang);
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: session };
+    }
+
+    session.prefs = updatePreferences(session.prefs, extracted);
+
+    const usefulFields = [session.prefs.budget, session.prefs.rooms, session.prefs.area, session.prefs.intentDetail].filter(v => v != null).length;
+    if (usefulFields >= 2) {
+      session.lastResults = matcher.findTopMatches(session.prefs, 3, lang);
+      session.state = 'recommended';
+      session.selectedProperty = null;
+      const reply = formatMatchesResponse(session.lastResults, lang);
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: session };
+    }
+
+    session.state = determineNextQuestion(session.prefs);
+    const reply = PHRASES[session.state][lang] || PHRASES.askType[lang];
+    session.history.push({ incoming: text, outgoing: reply });
+    return { reply, newState: session };
+  } catch (error) {
+    console.error('[ERROR] processMessage:', error.stack || error);
+    const lang = session.lang || 'ar';
+    const reply = PHRASES.fallback[lang];
+    return { reply, newState: session };
   }
-
-  // Ask for next missing info
-  const nextState = determineNextQuestion(updatedPrefs);
-  const reply = generateResponse(nextState, updatedPrefs);
-
-  return {
-    reply,
-    newState: { state: nextState, prefs: updatedPrefs, lastResults: [] }
-  };
 }
 
-// Test examples
 if (require.main === module) {
   console.log('Testing logic.js');
-
-  let state = { state: 'start', prefs: {}, lastResults: [] };
-
-  const testMessages = [
+  const demoSession = createSessionState('ar');
+  const messages = [
     'أبغى شقة رخيصة',
-    '3 غرف',
-    'في السالمية'
+    '3 غرف في السالمية',
+    'الأول',
+    'واتساب'
   ];
-
-  for (const msg of testMessages) {
-    console.log(`User: ${msg}`);
-    const result = processMessage(msg, state);
-    console.log(`Bot: ${result.reply}`);
-    state = result.newState;
+  let current = demoSession;
+  for (const msg of messages) {
+    console.log('User:', msg);
+    const result = processMessage(msg, current);
+    console.log('Bot:', result.reply);
+    current = result.newState;
     console.log('---');
   }
 }
 
 module.exports = {
-  analyzeMessage,
-  updatePreferences,
-  isReadyForRecommendation,
-  generateResponse,
+  createSessionState,
   processMessage,
-  findTopMatches,
-  formatPropertyCard,
-  formatMultipleResults,
-  detectNumericCommand
+  analyzeMessage: (message) => ({
+    intent: parser.detectIntent(message),
+    intentDetail: parser.detectIntentDetail(message),
+    budget: parser.detectBudget(message),
+    rooms: parser.detectRooms(message),
+    bathrooms: parser.detectBathrooms(message),
+    area: parser.detectArea(message),
+    propertyType: parser.detectPropertyType(message),
+    furnished: parser.detectFurnished(message),
+    saleVsRent: parser.detectSaleVsRent(message),
+    preferences: parser.detectPreferences(message),
+    contactMethod: parser.detectContactMethod(message),
+    selectionIndex: parser.detectSelectionIndex(message),
+    followUpAction: parser.detectFollowUpAction(message),
+    numericCommand: parser.detectNumericCommand(message)
+  }),
+  updatePreferences,
+  isReadyForRecommendation
 };
