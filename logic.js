@@ -13,7 +13,11 @@ function analyzeMessage(message) {
     intent: parser.detectIntent(message),
     budget: parser.detectBudget(message),
     rooms: parser.detectRooms(message),
-    area: parser.detectArea(message)
+    area: parser.detectArea(message),
+    propertyType: parser.detectPropertyType(message),
+    furnished: parser.detectFurnished(message),
+    saleVsRent: parser.detectSaleVsRent(message),
+    preferences: parser.detectPreferences(message)
   };
 }
 
@@ -60,19 +64,29 @@ function determineNextQuestion(prefs) {
 
 function recommendationReply(match) {
   const prop = match.property;
-  return `ممتاز 👍 خلني أرشح لك خيار مميز يناسب طلبك:
+  const priceFormatted = prop.price.toLocaleString('ar-KW');
+  
+  return `✨ ممتاز 👍 وجدت الخيار المناسب لك!
 
+━━━━━━━━━━━━━━━━━━━
 📍 ${prop.area}
-🏠 شقة - ${prop.rooms} غرف
-💰 السعر: ${prop.price.toLocaleString()} د.ك
-📐 المساحة: ${prop.size} م²
+🏠 ${prop.rooms > 0 ? prop.rooms + ' غرفة' : 'حسب الطلب'}
+💰 ${priceFormatted} د.ك
+📐 ${prop.size} م²
+━━━━━━━━━━━━━━━━━━━
 
 ${prop.description}
 
-هذا الخيار مناسب لك لأنه:
-- ${match.reason}
+✅ لماذا يناسبك:
+${match.reason}
 
-هل حاب أرسل لك خيارات أكثر أو تفاصيل إضافية؟`;
+━━━━━━━━━━━━━━━━━━━
+
+اختر ما يناسبك:
+1️⃣ أريد تفاصيل أكثر
+2️⃣ أرني خيارات أرخص
+3️⃣ أرني خيارات أفخم
+4️⃣ تواصل مع الوكيل`;
 }
 
 function generateResponse(nextState, prefs, match = null) {
@@ -82,15 +96,44 @@ function generateResponse(nextState, prefs, match = null) {
 
   switch (nextState) {
     case 'asked_type':
-      return `ممتاز 👍 هل تبحث عن شقة سكن أم استثمار؟`;
+      return `ممتاز 👍 ما نوع العقار اللي تبحث عنه؟
+
+1️⃣ شقة
+2️⃣ فيلا
+3️⃣ ستوديو
+4️⃣ مكتب تجاري`;
     case 'asked_budget':
-      return `ممتاز 👍 كم ميزانيتك التقريبية؟`;
+      return `👌 ما ميزانيتك التقريبية؟
+
+💰 اكتب المبلغ أو اختر:
+1️⃣ رخيص (أقل من 400 ألف)
+2️⃣ متوسط (400-600 ألف)
+3️⃣ فاخر (أكثر من 600 ألف)`;
     case 'asked_rooms':
-      return `تمام 👌 كم عدد الغرف اللي تفضلها؟`;
+      return `🏠 كم عدد الغرف تفضل؟
+
+1️⃣ غرفة واحدة
+2️⃣ غرفتين
+3️⃣ 3 غرف
+4️⃣ 4 غرف أو أكثر`;
     case 'asked_area':
-      return `تمام 👌 هل تفضل منطقة معينة في الكويت؟`;
+      return `📍 أي منطقة بالكويت تفضل؟
+
+1️⃣ السالمية
+2️⃣ حولي
+3️⃣ الفروانية
+4️⃣ الخالدية
+5️⃣ الدسمة
+6️⃣ أي منطقة`;
     default:
-      return `ممكن توضح أكثر؟ مثلاً عدد الغرف أو المنطقة أو الميزانية اللي تفضلها؟`;
+      return `👋 أهلًا وسهلًا!
+
+🏠 نساعدك تلقي الشقة أو الفيلا المناسبة بالكويت.
+
+كيف أقدر أساعدك؟ اكتب:
+• "شقة 3 غرف بـ 500 ألف"
+• "فيلا فخمة في السالمية"
+• "أرني رخيص الأسعار"`;
   }
 }
 

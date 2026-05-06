@@ -91,7 +91,7 @@ function detectRooms(text) {
  */
 function detectArea(text) {
   const normalized = normalizeArabicText(text);
-  const areas = ['السالمية', 'حولي', 'الفروانية'];
+  const areas = ['السالمية', 'حولي', 'الفروانية', 'الدسمة', 'الخالدية', 'الرقعي', 'ميدان حولي'];
   for (const area of areas) {
     if (normalized.includes(area)) {
       return area;
@@ -100,10 +100,80 @@ function detectArea(text) {
   return null;
 }
 
+/**
+ * Detect property type from text
+ * @param {string} text - The input text
+ * @returns {string|null} Property type: 'apartment', 'villa', 'studio', 'office', 'land', or null
+ */
+function detectPropertyType(text) {
+  const normalized = normalizeArabicText(text);
+  if (normalized.includes('فيلا') || normalized.includes('دوبلكس')) return 'villa';
+  if (normalized.includes('شقة')) return 'apartment';
+  if (normalized.includes('ستوديو') || normalized.includes('استوديو')) return 'studio';
+  if (normalized.includes('مكتب') || normalized.includes('تجاري')) return 'office';
+  if (normalized.includes('أرض') || normalized.includes('ارض')) return 'land';
+  return null;
+}
+
+/**
+ * Detect furnished status from text
+ * @param {string} text - The input text
+ * @returns {string|null} 'furnished', 'unfurnished', or null
+ */
+function detectFurnished(text) {
+  const normalized = normalizeArabicText(text);
+  if (normalized.includes('مفروش') || normalized.includes('مفروشة')) return 'furnished';
+  if (normalized.includes('غير مفروش') || normalized.includes('بدون مفروشات')) return 'unfurnished';
+  return null;
+}
+
+/**
+ * Detect if looking for rent vs buy from text
+ * @param {string} text - The input text
+ * @returns {string|null} 'buy', 'rent', or null
+ */
+function detectSaleVsRent(text) {
+  const normalized = normalizeArabicText(text);
+  if (normalized.includes('للبيع') || normalized.includes('تملك') || normalized.includes('شراء')) {
+    return 'buy';
+  }
+  if (normalized.includes('للإيجار') || normalized.includes('إيجار') || normalized.includes('استأجر')) {
+    return 'rent';
+  }
+  return null;
+}
+
+/**
+ * Detect special preferences from text
+ * @param {string} text - The input text
+ * @returns {Array<string>} Array of preferences found
+ */
+function detectPreferences(text) {
+  const normalized = normalizeArabicText(text);
+  const prefs = [];
+  
+  if (normalized.includes('أسانسير') || normalized.includes('اسانسير')) prefs.push('elevator');
+  if (normalized.includes('موقف') || normalized.includes('جراج')) prefs.push('parking');
+  if (normalized.includes('بحري') || normalized.includes('إطلالة بحرية')) prefs.push('sea_view');
+  if (normalized.includes('خدمات') || normalized.includes('خدمة')) prefs.push('near_services');
+  if (normalized.includes('مجمع')) prefs.push('compound');
+  if (normalized.includes('تكييف')) prefs.push('ac');
+  if (normalized.includes('غرفة خادمة')) prefs.push('maid_room');
+  if (normalized.includes('حديقة')) prefs.push('garden');
+  if (normalized.includes('للعائلات') || normalized.includes('عائلي')) prefs.push('family_friendly');
+  if (normalized.includes('عزاب') || normalized.includes('الشباب')) prefs.push('bachelor');
+  
+  return prefs;
+}
+
 module.exports = {
   normalizeArabicText,
   detectIntent,
   detectBudget,
   detectRooms,
-  detectArea
+  detectArea,
+  detectPropertyType,
+  detectFurnished,
+  detectSaleVsRent,
+  detectPreferences
 };

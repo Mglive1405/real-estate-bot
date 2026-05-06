@@ -33,18 +33,36 @@ app.get('/webhook', (req, res) => {
 
 app.post('/webhook', async (req, res) => {
   try {
-    console.log("FULL BODY:", JSON.stringify(req.body, null, 2));
-
     const entry = req.body.entry?.[0];
     const changes = entry?.changes?.[0];
     const value = changes?.value;
     const messages = value?.messages?.[0];
-    const from = messages?.from;
-    const text = messages?.text?.body;
+    const statusUpdate = value?.statuses?.[0];
 
-    if (!from || !text) {
+    console.log('[WEBHOOK] Entry:', JSON.stringify(entry, null, 2).substring(0, 500));
+    console.log('[WEBHOOK] Message type:', messages?.type || 'N/A');
+    console.log('[WEBHOOK] From:', messages?.from || 'N/A');
+    console.log('[WEBHOOK] Text body:', messages?.text?.body?.substring(0, 100) || 'N/A');
+
+    if (statusUpdate) {
+      console.log('[WEBHOOK] Status update (ignored):', statusUpdate.status);
       return res.sendStatus(200);
     }
+
+    if (!messages || messages.type !== 'text') {
+      console.log('[WEBHOOK] Skipping non-text or missing message');
+      return res.sendStatus(200);
+    }
+
+    const from = messages.from;
+    const text = messages.text?.body;
+
+    if (!from || !text) {
+      console.log('[WEBHOOK] Missing from or text');
+      return res.sendStatus(200);
+    }
+
+    console.log('[WEBHOOK] Processing message from:', from, 'Text:', text);
 
     if (!userStates[from]) {
       userStates[from] = { state: 'start', prefs: {} };
@@ -60,6 +78,7 @@ app.post('/webhook', async (req, res) => {
       return res.sendStatus(500);
     }
 
+    console.log('[API] Sending reply to:', from);
     await axios.post(
       `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
       {
@@ -77,9 +96,10 @@ app.post('/webhook', async (req, res) => {
       }
     );
 
+    console.log('[API] Reply sent successfully');
     return res.sendStatus(200);
   } catch (error) {
-    console.error('Error processing webhook:', error?.response?.data || error.message || error);
+    console.error('[ERROR] Webhook processing failed:', error?.response?.data || error.message || error);
     return res.sendStatus(500);
   }
 });
