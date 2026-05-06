@@ -33,6 +33,8 @@ app.get('/webhook', (req, res) => {
 
 app.post('/webhook', async (req, res) => {
   try {
+    console.log("FULL BODY:", JSON.stringify(req.body, null, 2));
+
     const entry = req.body.entry?.[0];
     const changes = entry?.changes?.[0];
     const value = changes?.value;
