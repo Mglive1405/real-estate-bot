@@ -46,7 +46,7 @@ const PHRASES = {
     en: 'Nice 👍 Are you looking for:\n1️⃣ comfort\n2️⃣ investment\n3️⃣ rent'
   },
   noMatch: {
-    ar: '🤔 لم أجد نتائج مطابقة تماماً، لكن لدي خيارات قريبة. جرب تعديل الميزانية أو المنطقة.',
+    ar: '🤔 ما حصلت نتائج دقيقة، لكن عندي خيارات قريبة ممكن تعجبك. جرب تعديل الميزانية أو المنطقة.',
     en: '🤔 I could not find an exact match, but I have close options. Try changing budget or area.'
   },
   asked_type: {
@@ -74,7 +74,7 @@ const PHRASES = {
     en: 'Great 👌 The agent will contact you directly.\n📞 +965 9976 9966'
   },
   followUpPrompt: {
-    ar: 'أي واحد شدك أكثر؟ 👀',
+    ar: 'خبرني أي خيار لفت انتباهك أكثر؟ 👀',
     en: 'Which one caught your attention? 👀'
   },
   nextFilter: {
@@ -122,9 +122,35 @@ function getOpening(lang) {
   return getRandomLine(options[lang] || options.ar);
 }
 
+function translateAmenity(item, lang) {
+  if (lang === 'ar') {
+    const translations = {
+      elevator: 'مصعد',
+      parking: 'موقف',
+      security: 'أمن',
+      pool: 'مسبح',
+      garden: 'حديقة',
+      gym: 'نادي رياضي',
+      mall: 'مول',
+      supermarket: 'سوبرماركت',
+      schools: 'مدارس',
+      mosque: 'مسجد',
+      services: 'خدمات',
+      hospital: 'مستشفى',
+      'near services': 'بقرب الخدمات',
+      'maid room': 'غرفة خادمة',
+      'sea view': 'إطلالة بحرية',
+      compound: 'مجمع سكني'
+    };
+    return translations[item] || item;
+  }
+  return item;
+}
+
 function formatList(items, lang) {
   if (!items || items.length === 0) return lang === 'ar' ? 'لا يوجد' : 'None';
-  return items.join(', ');
+  const translated = items.map(item => translateAmenity(item, lang));
+  return translated.join(' • ');
 }
 
 function formatBooleanLabel(value, lang) {
@@ -156,14 +182,17 @@ function formatPrice(price, lang) {
 
 function formatPropertySummary(match, index, lang) {
   const prop = match.property;
-  return `━━━━━━━━━━━━━━━━━━━\n${index}. ${formatPropertyType(prop.type, lang)} | ${prop.rooms} ${lang === 'ar' ? 'غرف' : 'rooms'} | ${formatPrice(prop.price, lang)}\n${lang === 'ar' ? '📍' : '📍'} ${prop.area}\n${lang === 'ar' ? '⭐ سبب الترشيح' : '⭐ Recommendation reason'}: ${match.reason}`;
+  if (lang === 'ar') {
+    return `\n━━━━━━━━━━━━━━━\n🔹 ${index}. ${formatPropertyType(prop.type, lang)} | ${prop.rooms} غرف | ${formatPrice(prop.price, lang)}\n📍 ${prop.area}\n✨ ${match.reason}`;
+  }
+  return `\n━━━━━━━━━━━━━━━\n🔹 ${index}. ${formatPropertyType(prop.type, lang)} | ${prop.rooms} rooms | ${formatPrice(prop.price, lang)}\n📍 ${prop.area}\n✨ ${match.reason}`;
 }
 
 function formatPropertyDetails(prop, lang) {
   if (lang === 'ar') {
-    return `📋 تفاصيل العقار\n\n🏠 نوع العقار: ${formatPropertyType(prop.type, lang)}\n📍 المنطقة: ${prop.area}\n💰 السعر: ${formatPrice(prop.price, lang)}\n📐 المساحة: ${prop.size} m²\n🛏️ الغرف: ${prop.rooms}\n🛁 الحمامات: ${prop.bathrooms}\n🛋️ الغرف المعيشة: ${prop.livingRooms}\n🍽️ المطبخ: ${formatKitchenLabel(prop.kitchen, lang)}\n🏢 الطابق: ${prop.floor}\n🛋️ مفروش: ${formatBooleanLabel(prop.furnished, lang)}\n🚗 موقف: ${formatBooleanLabel(prop.parking, lang)}\n✨ المرافق: ${formatList(prop.amenities, lang)}\n📍 القرب من: ${formatList(prop.nearby, lang)}\n📝 الوصف: ${prop.description_ar || prop.description_en || prop.shortTag || ''}`;
+    return `📋 تفاصيل العقار\n\n🏠 النوع: ${formatPropertyType(prop.type, lang)}\n📍 المنطقة: ${prop.area}\n💰 السعر: ${formatPrice(prop.price, lang)}\n\n📐 المساحة: ${prop.size} م² | 🛏️ ${prop.rooms} غرف | 🛁 ${prop.bathrooms} حمامات\n\n🍽️ المطبخ: ${formatKitchenLabel(prop.kitchen, lang)} | 🛋️ غرف المعيشة: ${prop.livingRooms}\n🏢 الطابق: ${prop.floor} | 🛋️ مفروش: ${formatBooleanLabel(prop.furnished, lang)} | 🚗 موقف: ${formatBooleanLabel(prop.parking, lang)}\n\n✨ المرافق: ${formatList(prop.amenities, lang)}\n📍 بالقرب من: ${formatList(prop.nearby, lang)}\n\n📝 الوصف: ${prop.description_ar || prop.description_en || prop.shortTag || ''}`;
   }
-  return `📋 Property details\n\n🏠 Type: ${formatPropertyType(prop.type, lang)}\n📍 Area: ${prop.area}\n💰 Price: ${formatPrice(prop.price, lang)}\n📐 Size: ${prop.size} m²\n🛏️ Rooms: ${prop.rooms}\n🛁 Bathrooms: ${prop.bathrooms}\n🛋️ Living rooms: ${prop.livingRooms}\n🍽️ Kitchen: ${formatKitchenLabel(prop.kitchen, lang)}\n🏢 Floor: ${prop.floor}\n🛋️ Furnished: ${formatBooleanLabel(prop.furnished, lang)}\n🚗 Parking: ${formatBooleanLabel(prop.parking, lang)}\n✨ Amenities: ${formatList(prop.amenities, lang)}\n📍 Nearby: ${formatList(prop.nearby, lang)}\n📝 Description: ${prop.description_ar || prop.description_en || prop.shortTag || ''}`;
+  return `📋 Property details\n\n🏠 Type: ${formatPropertyType(prop.type, lang)}\n📍 Area: ${prop.area}\n💰 Price: ${formatPrice(prop.price, lang)}\n\n📐 Size: ${prop.size} m² | 🛏️ ${prop.rooms} rooms | 🛁 ${prop.bathrooms} baths\n\n🍽️ Kitchen: ${formatKitchenLabel(prop.kitchen, lang)} | 🛋️ Living rooms: ${prop.livingRooms}\n🏢 Floor: ${prop.floor} | 🛋️ Furnished: ${formatBooleanLabel(prop.furnished, lang)} | 🚗 Parking: ${formatBooleanLabel(prop.parking, lang)}\n\n✨ Amenities: ${formatList(prop.amenities, lang)}\n📍 Nearby: ${formatList(prop.nearby, lang)}\n\n📝 Description: ${prop.description_ar || prop.description_en || prop.shortTag || ''}`;
 }
 
 function formatMatchesResponse(matches, lang) {
@@ -171,13 +200,25 @@ function formatMatchesResponse(matches, lang) {
     return PHRASES.noMatch[lang];
   }
 
-  const header = `${getOpening(lang)}\n\n${lang === 'ar' ? 'هذه بعض الخيارات اللي جمعت لك:' : 'Here are the top matches I found for you:'}`;
-  const cards = matches.map((match, idx) => formatPropertySummary(match, idx + 1, lang)).join('\n\n');
+  const header = `${getOpening(lang)}`;
+  const cards = matches.map((match, idx) => formatPropertySummary(match, idx + 1, lang)).join('');
   const menu = lang === 'ar'
-    ? 'اختر اللي يناسبك:\n1️⃣ تفاصيل الأول\n2️⃣ أرخص\n3️⃣ أفخم\n4️⃣ نفس المواصفات بمنطقة ثانية\n5️⃣ تواصل مع الوكيل'
-    : 'Choose what you want:\n1️⃣ Details for the first\n2️⃣ Cheaper options\n3️⃣ Luxury options\n4️⃣ Same specs in another area\n5️⃣ Contact the agent';
+    ? '\n━━━━━━━━━━━━━━━\n' +
+      `${PHRASES.followUpPrompt[lang]}\n` +
+      '1️⃣ تفاصيل الأول\n' +
+      '2️⃣ خيارات أرخص\n' +
+      '3️⃣ خيارات فاخرة\n' +
+      '4️⃣ نفس المواصفات في منطقة ثانية\n' +
+      '5️⃣ تواصل مع الوكيل'
+    : '\n━━━━━━━━━━━━━━━\n' +
+      `${PHRASES.followUpPrompt[lang]}\n` +
+      '1️⃣ Details for the first\n' +
+      '2️⃣ Cheaper options\n' +
+      '3️⃣ Luxury options\n' +
+      '4️⃣ Same specs in another area\n' +
+      '5️⃣ Contact the agent';
 
-  return `${header}\n\n${cards}\n\n${PHRASES.followUpPrompt[lang]}\n\n${menu}`;
+  return `${header}${cards}${menu}`;
 }
 
 function formatSelectionReply(match, lang) {
@@ -253,6 +294,17 @@ function processMessage(message, session) {
     session.lang = lang;
     session.lastInteraction = Date.now();
 
+    if (parser.isGreeting(text)) {
+      if (lang === 'ar') {
+        const reply = 'وعليكم السلام 👋\n\nهلا بك! ممكن أساعدك تلقى عقار مناسب.\nبس قلّي نوع العقار، الميزانية، والمنطقة اللي تبيها.';
+        session.history.push({ incoming: text, outgoing: reply });
+        return { reply, newState: session };
+      }
+      const reply = 'Hello! 👋\n\nI can help you find the right property.\nTell me the type, budget, and preferred area.';
+      session.history.push({ incoming: text, outgoing: reply });
+      return { reply, newState: session };
+    }
+
     const followUpAction = parser.detectFollowUpAction(text);
     const selectionIndex = parser.detectSelectionIndex(text);
     const contactMethod = parser.detectContactMethod(text);
@@ -299,7 +351,8 @@ function processMessage(message, session) {
         session.history.push({ incoming: text, outgoing: reply });
         return { reply, newState: session };
       } else if (numericCommand === 4) {
-        session.lastResults = matcher.findTopMatches({ ...session.prefs, area: undefined }, 3, lang);
+        const currentAreas = session.lastResults ? session.lastResults.map(r => r.property.area) : [];
+        session.lastResults = matcher.findTopMatchesByArea({ ...session.prefs, area: undefined, excludeAreas: currentAreas }, 3, lang);
         session.state = 'recommended';
         session.selectedProperty = null;
         const reply = formatMatchesResponse(session.lastResults, lang);
@@ -384,7 +437,8 @@ function processMessage(message, session) {
     }
 
     if (followUpAction === 'another_area' && session.lastResults && session.lastResults.length > 0) {
-      session.lastResults = matcher.findTopMatches({ ...session.prefs, area: undefined }, 3, lang);
+      const currentAreas = session.lastResults.map(r => r.property.area);
+      session.lastResults = matcher.findTopMatchesByArea({ ...session.prefs, area: undefined, excludeAreas: currentAreas }, 3, lang);
       session.state = 'recommended';
       session.selectedProperty = null;
       const reply = formatMatchesResponse(session.lastResults, lang);

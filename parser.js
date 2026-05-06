@@ -222,6 +222,11 @@ function detectFollowUpAction(text) {
   return null;
 }
 
+function isGreeting(text) {
+  const normalized = normalizeText(text);
+  return /(السلام عليكم|السلام عليكن|سلام|مرحبا|مرحبتا|هلا|هلا والله|أهلا|hello|hi|hey|greetings|salaam)/.test(normalized);
+}
+
 function detectName(text) {
   const normalized = String(text || '').trim();
   const match = normalized.match(/(?:يا\s+|ya\s+|hi\s+|hello\s+|hey\s+)([A-Za-z][A-Za-z]+)/i);
@@ -246,5 +251,6 @@ module.exports = {
   detectNumericCommand,
   detectSelectionIndex,
   detectFollowUpAction,
-  detectName
+  detectName,
+  isGreeting
 };

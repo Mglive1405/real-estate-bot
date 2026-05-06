@@ -71,43 +71,76 @@ function scoreProperty(property, prefs) {
   return score;
 }
 
+function getRandomReason(options) {
+  return options[Math.floor(Math.random() * options.length)];
+}
+
 function generateMatchReason(property, prefs, lang = 'ar') {
   const reasons = [];
-  const hasReason = (textAr, textEn) => (lang === 'ar' ? textAr : textEn);
+
+  if (lang === 'ar') {
+    if (prefs.area && property.area === prefs.area) {
+      reasons.push(getRandomReason(['موقع ممتاز وقريب من الخدمات', 'منطقة مرغوبة ومريحة', 'إطلالة وموقع جيد']));
+    }
+    if (prefs.rooms && property.rooms === prefs.rooms) {
+      reasons.push(getRandomReason(['عدد الغرف مناسب تماماً', 'مساحة ممتازة لعائلتك', 'تصميم عملي بعدد غرف مناسب']));
+    }
+    if (prefs.budget) {
+      if (prefs.budget === 'low' && property.price < 400000) reasons.push(getRandomReason(['سعر ممتاز بالنسبة للميزانية', 'فرصة قيمة وسعر مناسب', 'صفقة جذابة في هذا النطاق']));
+      else if (prefs.budget === 'medium' && property.price >= 400000 && property.price < 600000) reasons.push(getRandomReason(['قيمة جيدة مقابل السعر', 'خيار متوازن ومريح', 'سعر مناسب مع جودة عالية']));
+      else if (prefs.budget === 'high' && property.price >= 600000) reasons.push(getRandomReason(['خيار فاخر ومتميز', 'تجربة سكن راقية', 'استثمار قوي في موقع ممتاز']));
+    }
+    if (prefs.intentDetail === 'comfort' && property.rooms >= 3) {
+      reasons.push(getRandomReason(['مناسب للعائلة ويعطي راحة أكبر', 'مساحة مريحة للعائلة', 'مناسب لحياة يومية هادئة']));
+    }
+    if (prefs.intentDetail === 'investment' && property.price >= 500000) {
+      reasons.push(getRandomReason(['استثمار جيد وبطلب مرتفع', 'فرصة استثمارية قوية', 'عقار يمكن أن يعطيك عائد ممتاز']));
+    }
+    if (prefs.intentDetail === 'rent' && (property.nearby.includes('supermarket') || property.nearby.includes('schools'))) {
+      reasons.push(getRandomReason(['قريب من الخدمات ومطلوب للإيجار', 'منطقة إيجار مرغوبة للعائلات', 'موقع مناسب للإيجار بشكل قوي']));
+    }
+    if (property.amenities.includes('parking')) {
+      reasons.push('موقف خاص متاح');
+    }
+    if (property.amenities.includes('security')) {
+      reasons.push('أمن وحماية متوفران');
+    }
+    if (reasons.length === 0) {
+      return getRandomReason(['خيار ممتاز يناسب تفضيلاتك', 'من أفضل الخيارات المتاحة الآن', 'عقار قوي بناءً على طلبك']);
+    }
+    return reasons.slice(0, 2).join(' و ');
+  }
 
   if (prefs.area && property.area === prefs.area) {
-    reasons.push(hasReason('موقع قوي', 'Strong location'));
+    reasons.push(getRandomReason(['Great location near services', 'Popular area with good demand', 'Easy access to neighborhood amenities']));
   }
   if (prefs.rooms && property.rooms === prefs.rooms) {
-    reasons.push(hasReason('عدد الغرف مناسب', 'Room count fits')); 
+    reasons.push(getRandomReason(['Ideal room layout', 'Perfect number of rooms', 'Great space for your needs']));
   }
   if (prefs.budget) {
-    if (prefs.budget === 'low' && property.price < 400000) reasons.push(hasReason('سعر مناسب للميزانية', 'Great budget fit'));
-    else if (prefs.budget === 'medium' && property.price >= 400000 && property.price < 600000) reasons.push(hasReason('خيار متوازن', 'Balanced price'));
-    else if (prefs.budget === 'high' && property.price >= 600000) reasons.push(hasReason('خيار فاخر', 'Premium choice'));
+    if (prefs.budget === 'low' && property.price < 400000) reasons.push(getRandomReason(['Excellent budget fit', 'Very good value', 'Strong budget-friendly choice']));
+    else if (prefs.budget === 'medium' && property.price >= 400000 && property.price < 600000) reasons.push(getRandomReason(['Balanced price and quality', 'Great mid-range option', 'Strong value proposition']));
+    else if (prefs.budget === 'high' && property.price >= 600000) reasons.push(getRandomReason(['Premium and luxurious', 'Top-tier choice', 'High-end value']));
   }
   if (prefs.intentDetail === 'comfort' && property.rooms >= 3) {
-    reasons.push(hasReason('هذا خيار ممتاز للعائلة', 'Excellent choice for family'));
+    reasons.push(getRandomReason(['Great family fit', 'Comfortable living space', 'Ideal for daily comfort']));
   }
   if (prefs.intentDetail === 'investment' && property.price >= 500000) {
-    reasons.push(hasReason('استثمار ممتاز بعائد قوي', 'Great investment potential'));
+    reasons.push(getRandomReason(['Strong investment', 'Great return potential', 'Good opportunity']));
   }
   if (prefs.intentDetail === 'rent' && (property.nearby.includes('supermarket') || property.nearby.includes('schools'))) {
-    reasons.push(hasReason('موقع مطلوب للإيجار', 'High demand rental area'));
+    reasons.push(getRandomReason(['High rental demand', 'Great rental location', 'Family-friendly rental area']));
   }
-
   if (property.amenities.includes('parking')) {
-    reasons.push(hasReason('موقف متاح', 'Parking available'));
+    reasons.push('Private parking');
   }
   if (property.amenities.includes('security')) {
-    reasons.push(hasReason('أمن وخدمات', 'Security and services'));
+    reasons.push('24/7 security');
   }
-
   if (reasons.length === 0) {
-    return hasReason('خيار ممتاز يناسب تفضيلاتك', 'Excellent option for your needs');
+    return getRandomReason(['Excellent option', 'Great choice', 'Smart pick']);
   }
-  const joiner = lang === 'ar' ? ' و' : ' and ';
-  return reasons.slice(0, 3).join(joiner);
+  return reasons.slice(0, 2).join(' and ');
 }
 
 function findTopMatches(prefs, limit = 3, lang = 'ar') {
@@ -124,9 +157,26 @@ function findTopMatches(prefs, limit = 3, lang = 'ar') {
     .slice(0, limit);
 }
 
+function findTopMatchesByArea(prefs, limit = 3, lang = 'ar') {
+  const properties = loadProperties();
+  const excludeAreas = prefs.excludeAreas || [];
+  const filtered = properties.filter(p => !excludeAreas.includes(p.area));
+  const results = filtered.map(property => {
+    const score = scoreProperty(property, prefs);
+    const reason = generateMatchReason(property, prefs, lang);
+    return { property, score, reason };
+  });
+
+  return results
+    .filter(result => result.score >= 1)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
 module.exports = {
   loadProperties,
   scoreProperty,
   generateMatchReason,
-  findTopMatches
+  findTopMatches,
+  findTopMatchesByArea
 };
