@@ -3,9 +3,9 @@
 This is the initial design phase of a WhatsApp chatbot for real estate.
 
 ## What is included:
-- Conversation flow (flow.txt)
 - Sample property data (data.txt)
-- Bot behavior/personality (persona.txt)
+- Bot logic and parsing (logic.js, parser.js, matcher.js)
+- WhatsApp integration (meta-whatsapp.js)
 
 ## Purpose:
 To simulate a smart assistant that helps clients find apartments for sale in Kuwait.
