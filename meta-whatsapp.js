@@ -65,7 +65,7 @@ app.post('/webhook', async (req, res) => {
     console.log('[WEBHOOK] Processing message from:', from, 'Text:', text);
 
     if (!userStates[from]) {
-      userStates[from] = { state: 'start', prefs: {} };
+      userStates[from] = { state: 'start', prefs: {}, lastResults: [] };
     }
 
     const currentState = userStates[from];

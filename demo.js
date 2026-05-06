@@ -21,8 +21,8 @@ try {
 console.log('=== Real Estate Bot Demo ===\n');
 
 // Simulate a conversation with partial input
-console.log('Conversation 1: Partial input handling\n');
-let state1 = { state: 'start', prefs: {} };
+console.log('Conversation 1: Smart memory + multi-property results\n');
+let state1 = { state: 'start', prefs: {}, lastResults: [] };
 const conv1 = [
   'أبغى شقة رخيصة',
   '3 غرف في السالمية'
@@ -37,7 +37,7 @@ for (const msg of conv1) {
 }
 
 console.log('\nConversation 2: Enough info early\n');
-let state2 = { state: 'start', prefs: {} };
+let state2 = { state: 'start', prefs: {}, lastResults: [] };
 const conv2 = [
   'أبغى شقة 3 غرف في السالمية بحدود 500 ألف'
 ];
@@ -51,7 +51,7 @@ for (const msg of conv2) {
 }
 
 console.log('\nConversation 3: Fallback handling\n');
-let state3 = { state: 'start', prefs: {} };
+let state3 = { state: 'start', prefs: {}, lastResults: [] };
 const conv3 = [
   'مرحبا',
   'أبغى شقة'
