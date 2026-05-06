@@ -28,6 +28,10 @@ function detectLanguage(text) {
   const normalized = normalizeText(text);
   const hasArabic = /[\u0600-\u06FF]/.test(text);
   const hasEnglish = /[A-Za-z]/.test(text);
+  
+  // If no language markers found (only numbers), return null
+  if (!hasArabic && !hasEnglish) return null;
+  
   if (hasArabic && !hasEnglish) return 'ar';
   if (hasEnglish && !hasArabic) return 'en';
   const englishKeywords = ['buy', 'rent', 'luxury', 'cheap', 'family', 'room', 'apartment', 'villa', 'studio', 'office'];

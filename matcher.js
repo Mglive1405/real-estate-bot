@@ -106,7 +106,8 @@ function generateMatchReason(property, prefs, lang = 'ar') {
   if (reasons.length === 0) {
     return hasReason('خيار ممتاز يناسب تفضيلاتك', 'Excellent option for your needs');
   }
-  return reasons.slice(0, 3).join(' و');
+  const joiner = lang === 'ar' ? ' و' : ' and ';
+  return reasons.slice(0, 3).join(joiner);
 }
 
 function findTopMatches(prefs, limit = 3, lang = 'ar') {

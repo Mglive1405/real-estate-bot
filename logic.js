@@ -97,6 +97,8 @@ function createSessionState(lang = 'ar') {
 
 function getLang(message, currentLang) {
   const detected = parser.detectLanguage(message);
+  // If no language detected (e.g., numbers-only), keep current language
+  if (detected === null) return currentLang || 'ar';
   return detected || currentLang || 'ar';
 }
 
@@ -158,8 +160,10 @@ function formatPropertySummary(match, index, lang) {
 }
 
 function formatPropertyDetails(prop, lang) {
-  return `📋 ${lang === 'ar' ? 'تفاصيل العقار' : 'Property details'}\n
-🏠 ${lang === 'ar' ? 'نوع العقار' : 'Type'}: ${formatPropertyType(prop.type, lang)}\n📍 ${lang === 'ar' ? 'المنطقة' : 'Area'}: ${prop.area}\n💰 ${lang === 'ar' ? 'السعر' : 'Price'}: ${formatPrice(prop.price, lang)}\n📐 ${lang === 'ar' ? 'المساحة' : 'Size'}: ${prop.size} m²\n🛏️ ${lang === 'ar' ? 'الغرف' : 'Rooms'}: ${prop.rooms}\n🛁 ${lang === 'ar' ? 'الحمامات' : 'Bathrooms'}: ${prop.bathrooms}\n🛋️ ${lang === 'ar' ? 'الغرف المعيشة' : 'Living rooms'}: ${prop.livingRooms}\n🍽️ ${lang === 'ar' ? 'المطبخ' : 'Kitchen'}: ${formatKitchenLabel(prop.kitchen, lang)}\n🏢 ${lang === 'ar' ? 'الطابق' : 'Floor'}: ${prop.floor}\n${lang === 'ar' ? '🛋️ مفروش' : '🛋️ Furnished'}: ${formatBooleanLabel(prop.furnished, lang)}\n${lang === 'ar' ? '🚗 موقف' : '🚗 Parking'}: ${formatBooleanLabel(prop.parking, lang)}\n${lang === 'ar' ? '✨ المرافق' : '✨ Amenities'}: ${formatList(prop.amenities, lang)}\n${lang === 'ar' ? '📍 القرب من' : '📍 Nearby'}: ${formatList(prop.nearby, lang)}\n${lang === 'ar' ? '📝 الوصف' : '📝 Description'}: ${prop.description_ar || prop.description_en || prop.shortTag || ''}`;
+  if (lang === 'ar') {
+    return `📋 تفاصيل العقار\n\n🏠 نوع العقار: ${formatPropertyType(prop.type, lang)}\n📍 المنطقة: ${prop.area}\n💰 السعر: ${formatPrice(prop.price, lang)}\n📐 المساحة: ${prop.size} m²\n🛏️ الغرف: ${prop.rooms}\n🛁 الحمامات: ${prop.bathrooms}\n🛋️ الغرف المعيشة: ${prop.livingRooms}\n🍽️ المطبخ: ${formatKitchenLabel(prop.kitchen, lang)}\n🏢 الطابق: ${prop.floor}\n🛋️ مفروش: ${formatBooleanLabel(prop.furnished, lang)}\n🚗 موقف: ${formatBooleanLabel(prop.parking, lang)}\n✨ المرافق: ${formatList(prop.amenities, lang)}\n📍 القرب من: ${formatList(prop.nearby, lang)}\n📝 الوصف: ${prop.description_ar || prop.description_en || prop.shortTag || ''}`;
+  }
+  return `📋 Property details\n\n🏠 Type: ${formatPropertyType(prop.type, lang)}\n📍 Area: ${prop.area}\n💰 Price: ${formatPrice(prop.price, lang)}\n📐 Size: ${prop.size} m²\n🛏️ Rooms: ${prop.rooms}\n🛁 Bathrooms: ${prop.bathrooms}\n🛋️ Living rooms: ${prop.livingRooms}\n🍽️ Kitchen: ${formatKitchenLabel(prop.kitchen, lang)}\n🏢 Floor: ${prop.floor}\n🛋️ Furnished: ${formatBooleanLabel(prop.furnished, lang)}\n🚗 Parking: ${formatBooleanLabel(prop.parking, lang)}\n✨ Amenities: ${formatList(prop.amenities, lang)}\n📍 Nearby: ${formatList(prop.nearby, lang)}\n📝 Description: ${prop.description_ar || prop.description_en || prop.shortTag || ''}`;
 }
 
 function formatMatchesResponse(matches, lang) {
@@ -178,7 +182,10 @@ function formatMatchesResponse(matches, lang) {
 
 function formatSelectionReply(match, lang) {
   const prop = match.property;
-  return `${lang === 'ar' ? 'خيار ممتاز، هذه التفاصيل:' : 'Great choice, here are the details:'}\n\n${formatPropertyDetails(prop, lang)}\n\n${lang === 'ar' ? '✅ سبب الترشيح' : '✅ Recommendation reason'}: ${match.reason}\n\n${lang === 'ar' ? 'إذا حاب تواصل مع الوكيل اكتب: واتساب أو اتصال' : 'If you want the agent to contact you, reply with WhatsApp or call.'}`;
+  if (lang === 'ar') {
+    return `خيار ممتاز، هذه التفاصيل:\n\n${formatPropertyDetails(prop, lang)}\n\n✅ سبب الترشيح: ${match.reason}\n\nإذا حاب تواصل مع الوكيل اكتب: واتساب أو اتصال`;
+  }
+  return `Great choice, here are the details:\n\n${formatPropertyDetails(prop, lang)}\n\n✅ Recommendation reason: ${match.reason}\n\nIf you want the agent to contact you, reply with WhatsApp or call.`;
 }
 
 function updatePreferences(currentPrefs, newPrefs) {
@@ -216,6 +223,10 @@ function determineNextQuestion(prefs) {
 function applyMenuChoice(message, session) {
   const choice = parser.detectNumericCommand(message);
   if (!choice) return null;
+  
+  // After recommendations shown, numeric input is for follow-up actions, not menu choices
+  if (session.state === 'recommended') return null;
+  
   if (!session.state || !MENU_CHOICES[session.state]) return null;
   const mapped = MENU_CHOICES[session.state][choice];
   if (!mapped) return null;
@@ -224,9 +235,15 @@ function applyMenuChoice(message, session) {
 
 function buildContactResponse(contactMethod, lang) {
   if (contactMethod) {
-    return PHRASES.contact_confirmed[lang] || PHRASES.contactConfirmed?.[lang];
+    if (lang === 'ar') {
+      return 'تمام 👌 بخلي الوسيط يتواصل معك مباشرة\n📞 +965 9976 9966';
+    }
+    return 'Great 👌 The agent will contact you directly.\n📞 +965 9976 9966';
   }
-  return PHRASES.asking_contact_method[lang] || PHRASES.askContactMethod?.[lang];
+  if (lang === 'ar') {
+    return 'تمام 👌 تفضل تواصل عبر واتساب أو اتصال؟';
+  }
+  return 'Great 👌 Would you like WhatsApp or a phone call?';
 }
 
 function processMessage(message, session) {
@@ -256,6 +273,52 @@ function processMessage(message, session) {
       followUpAction,
       numericCommand
     };
+
+    // Handle numeric commands in 'recommended' state as follow-up actions
+    if (session.state === 'recommended' && numericCommand) {
+      if (numericCommand === 1) {
+        if (session.lastResults && session.lastResults.length > 0) {
+          const match = session.lastResults[0];
+          session.selectedProperty = match.property;
+          const reply = formatSelectionReply(match, lang);
+          session.history.push({ incoming: text, outgoing: reply });
+          return { reply, newState: { ...session, state: 'selected' } };
+        }
+      } else if (numericCommand === 2) {
+        session.lastResults = matcher.findTopMatches({ ...session.prefs, budget: 'low' }, 3, lang);
+        session.state = 'recommended';
+        session.selectedProperty = null;
+        const reply = formatMatchesResponse(session.lastResults, lang);
+        session.history.push({ incoming: text, outgoing: reply });
+        return { reply, newState: session };
+      } else if (numericCommand === 3) {
+        session.lastResults = matcher.findTopMatches({ ...session.prefs, budget: 'high' }, 3, lang);
+        session.state = 'recommended';
+        session.selectedProperty = null;
+        const reply = formatMatchesResponse(session.lastResults, lang);
+        session.history.push({ incoming: text, outgoing: reply });
+        return { reply, newState: session };
+      } else if (numericCommand === 4) {
+        session.lastResults = matcher.findTopMatches({ ...session.prefs, area: undefined }, 3, lang);
+        session.state = 'recommended';
+        session.selectedProperty = null;
+        const reply = formatMatchesResponse(session.lastResults, lang);
+        session.history.push({ incoming: text, outgoing: reply });
+        return { reply, newState: session };
+      } else if (numericCommand === 5) {
+        if (contactMethod) {
+          session.prefs.contactMethod = contactMethod;
+          session.state = 'contact_confirmed';
+          const reply = buildContactResponse(contactMethod, lang);
+          session.history.push({ incoming: text, outgoing: reply });
+          return { reply, newState: session };
+        }
+        session.state = 'asking_contact_method';
+        const reply = buildContactResponse(null, lang);
+        session.history.push({ incoming: text, outgoing: reply });
+        return { reply, newState: session };
+      }
+    }
 
     const menuChoice = applyMenuChoice(text, session);
     if (menuChoice) {
